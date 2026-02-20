@@ -10,9 +10,9 @@ import {
   ArrowUpRight,
   ChefHat,
   ShieldAlert,
-  Ruler,
   Camera,
   Smartphone,
+  AlertTriangle,
 } from "lucide-react";
 
 // Shared Components & Logic
@@ -38,7 +38,6 @@ import PropertyAccessStep from "./steps/PropertyAccessStep";
 import InternalCirculationStep from "./steps/InternalCirculationStep";
 import FacilitiesStep from "./steps/FacilitiesStep";
 import SafetyHazardsStep from "./steps/SafetyHazardsStep";
-import CalibrationStep from "./steps/CalibrationStep";
 import SmartCaptureStep from "./steps/SmartCaptureStep";
 import AnalysisStep from "./steps/AnalysisStep";
 
@@ -48,12 +47,11 @@ const steps = [
   { id: 1, title: "Client", icon: <User size={18} /> },
   { id: 2, title: "Plan", icon: <Upload size={18} /> },
   { id: 3, title: "Capture", icon: <Camera size={18} /> },
-  { id: 4, title: "Calibrate", icon: <Ruler size={18} /> },
-  { id: 5, title: "Property", icon: <Home size={18} /> },
-  { id: 6, title: "Circulation", icon: <ArrowUpRight size={18} /> },
-  { id: 7, title: "Facilities", icon: <ChefHat size={18} /> },
-  { id: 8, title: "Safety", icon: <ShieldAlert size={18} /> },
-  { id: 9, title: "Analysis", icon: <Smartphone size={18} /> },
+  { id: 4, title: "Property", icon: <Home size={18} /> },
+  { id: 5, title: "Circulation", icon: <ArrowUpRight size={18} /> },
+  { id: 6, title: "Facilities", icon: <ChefHat size={18} /> },
+  { id: 7, title: "Safety", icon: <ShieldAlert size={18} /> },
+  { id: 8, title: "Analysis", icon: <Smartphone size={18} /> },
 ];
 
 interface AssessmentWizardProps {
@@ -82,7 +80,6 @@ const initialFormData = {
   bedSpaces: 1,
   photos: [],
   categoryPhotos: {},
-  calibrationWidth: null,
   floorPlan: null,
   hasNoFloorPlan: false,
   bathroomLocation: "",
@@ -111,6 +108,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
   const [processingCategory, setProcessingCategory] = useState<string | null>(
     null,
   );
+  const [stopAssessmentReason, setStopAssessmentReason] = useState<string | null>(null);
 
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -235,8 +233,8 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
         const currentPhotos = Array.isArray(formData.photos)
           ? formData.photos
           : Array.isArray(formData.evidence)
-            ? formData.evidence
-            : [];
+          ? formData.evidence
+          : [];
         const newPhotos = [...currentPhotos, ...base64Photos];
         handleUpdateField("photos", newPhotos);
       }
@@ -255,6 +253,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
 
     setIsAnalyzing(true);
     setValidationErrors({});
+    setStopAssessmentReason(null);
 
     try {
       const result = await analyzeAllCategoryPhotos(categoryPhotos);
@@ -262,6 +261,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
       if (result) {
         // Process results
         let hasErrors = false;
+        let stopReason: string | null = null;
         const newErrors: Record<string, string> = {};
         const newSuggestions = { ...aiSuggestions };
 
@@ -269,6 +269,11 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
         Object.entries(result.results).forEach(([catId, res]) => {
           if (res.valid) {
             Object.assign(newSuggestions, res.data);
+            
+            // Check for Stop Flags from AI
+            if (res.data.stop_assessment_flag) {
+                stopReason = res.data.stop_reason || `Critical issue detected in ${catId}`;
+            }
           } else {
             hasErrors = true;
             newErrors[catId] = res.reason || "Image validation failed";
@@ -284,11 +289,19 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
         setAiSuggestions(newSuggestions);
         setStep3AnalysisComplete(true);
 
+        if (stopReason) {
+            setStopAssessmentReason(stopReason);
+            toast.error("Assessment Stop Triggered", {
+                description: stopReason,
+                duration: 10000,
+            });
+        }
+
         if (hasErrors) {
           toast.warning("Some photos couldn't be verified", {
             description: "Please check the highlighted categories.",
           });
-        } else {
+        } else if (!stopReason) {
           toast.success("All photos analyzed successfully!");
         }
 
@@ -336,14 +349,14 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
 
   const isNextDisabled = () => {
     if (isProcessing || isAnalyzing) return true;
+    if (stopAssessmentReason) return true; // Stop assessment if flag triggered
     if (step === 1)
       return !formData.fullName || !formData.street || !formData.postcode;
     if (step === 2) return !formData.floorPlan && !formData.hasNoFloorPlan;
     if (step === 3) return (formData.photos || []).length < 1 || !step3AnalysisComplete; // Require photos AND analysis
-    if (step === 4) return !formData.calibrationWidth;
-    if (step === 5) return !formData.propertyType || !formData.entranceLevel;
-    if (step === 6) return !formData.internalStairs;
-    if (step === 7) return !formData.bathroomLocation;
+    if (step === 4) return !formData.propertyType || !formData.entranceLevel;
+    if (step === 5) return !formData.internalStairs;
+    if (step === 6) return !formData.bathroomLocation;
     return false;
   };
 
@@ -421,6 +434,26 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
 
         {/* Content Area */}
         <div style={contentStyle}>
+            {stopAssessmentReason && (
+                <div style={{
+                    marginBottom: '20px',
+                    padding: '16px',
+                    background: '#fef2f2',
+                    border: '1px solid #fee2e2',
+                    borderRadius: '12px',
+                    color: '#991b1b',
+                    display: 'flex',
+                    alignItems: 'start',
+                    gap: '12px'
+                }}>
+                    <AlertTriangle className="shrink-0" size={20} />
+                    <div>
+                        <h4 style={{ fontWeight: '700', fontSize: '14px', marginBottom: '4px' }}>Assessment Stop Triggered</h4>
+                        <p style={{ fontSize: '13px' }}>{stopAssessmentReason}</p>
+                    </div>
+                </div>
+            )}
+
           <AnimatePresence mode="wait">
             {step === 1 && (
               <ClientInfoStep
@@ -458,14 +491,6 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
               />
             )}
             {step === 4 && (
-              <CalibrationStep
-                key="s4"
-                formData={formData}
-                handleUpdateField={handleUpdateField}
-                handlePhotoUpload={handlePhotoUpload}
-              />
-            )}
-            {step === 5 && (
               <PropertyAccessStep
                 key="s5"
                 formData={formData}
@@ -474,7 +499,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 aiSuggestions={aiSuggestions}
               />
             )}
-            {step === 6 && (
+            {step === 5 && (
               <InternalCirculationStep
                 key="s6"
                 formData={formData}
@@ -483,7 +508,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 aiSuggestions={aiSuggestions}
               />
             )}
-            {step === 7 && (
+            {step === 6 && (
               <FacilitiesStep
                 key="s7"
                 formData={formData}
@@ -492,7 +517,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 aiSuggestions={aiSuggestions}
               />
             )}
-            {step === 8 && (
+            {step === 7 && (
               <SafetyHazardsStep
                 key="s8"
                 formData={formData}
@@ -501,7 +526,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 aiSuggestions={aiSuggestions}
               />
             )}
-            {step === 9 && (
+            {step === 8 && (
               <AnalysisStep
                 key="s9"
                 formData={formData}
@@ -543,9 +568,9 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
             <button
               disabled={isNextDisabled()}
               onClick={() => {
-                if (step === 9) {
+                if (step === 8) {
                   handleSafeClose();
-                } else if (step === 8) {
+                } else if (step === 7) {
                   setStep(step + 1);
                   startAiAnalysis();
                 } else {
@@ -556,12 +581,12 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 isNextDisabled() ? disabledButtonStyle : primaryButtonStyle
               }
             >
-              {step === 9
+              {step === 8
                 ? "Complete Assessment"
-                : step === 8
+                : step === 7
                   ? "Start AI Analysis"
                   : "Continue"}
-              {step < 9 && <ChevronRight size={20} />}
+              {step < 8 && <ChevronRight size={20} />}
             </button>
           </div>
         </div>

@@ -69,6 +69,44 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                             Uploading...
                         </div>
                     )}
+                    
+                    <button
+                        onClick={onAnalyze}
+                        disabled={!hasPhotos || isAnalyzing || isProcessing || analysisComplete}
+                        style={{
+                            padding: '8px 16px',
+                            borderRadius: '12px',
+                            background: analysisComplete ? '#dcfce7' : isAnalyzing ? 'var(--primary-light)' : 'var(--primary)',
+                            color: analysisComplete ? '#166534' : isAnalyzing ? 'var(--primary)' : '#fff',
+                            border: analysisComplete ? '1px solid #bbf7d0' : 'none',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: (!hasPhotos || isAnalyzing || isProcessing || analysisComplete) ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            opacity: (!hasPhotos && !isAnalyzing && !analysisComplete) ? 0.6 : 1,
+                            transition: 'all 0.2s',
+                            boxShadow: analysisComplete ? 'none' : '0 2px 8px rgba(99, 102, 241, 0.25)'
+                        }}
+                    >
+                        {isAnalyzing ? (
+                            <>
+                                <RefreshCw className="animate-spin" size={14} />
+                                Analyzing...
+                            </>
+                        ) : analysisComplete ? (
+                            <>
+                                <CheckCircle size={14} />
+                                Complete
+                            </>
+                        ) : (
+                            <>
+                                <RefreshCw size={14} />
+                                Analyze
+                            </>
+                        )}
+                    </button>
                 </div>
             </div>
 
@@ -181,47 +219,6 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                         </div>
                     );
                 })}
-            </div>
-
-            {/* Analysis Action */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-                <button
-                    onClick={onAnalyze}
-                    disabled={!hasPhotos || isAnalyzing || isProcessing || analysisComplete}
-                    style={{
-                        padding: '12px 24px',
-                        borderRadius: '16px',
-                        background: analysisComplete ? '#dcfce7' : isAnalyzing ? 'var(--primary-light)' : 'var(--primary)',
-                        color: analysisComplete ? '#166534' : isAnalyzing ? 'var(--primary)' : '#fff',
-                        border: analysisComplete ? '1px solid #bbf7d0' : 'none',
-                        fontSize: '14px',
-                        fontWeight: '700',
-                        cursor: (!hasPhotos || isAnalyzing || isProcessing || analysisComplete) ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        opacity: (!hasPhotos && !isAnalyzing && !analysisComplete) ? 0.6 : 1,
-                        transition: 'all 0.2s',
-                        boxShadow: analysisComplete ? 'none' : '0 4px 12px rgba(99, 102, 241, 0.3)'
-                    }}
-                >
-                    {isAnalyzing ? (
-                        <>
-                            <RefreshCw className="animate-spin" size={18} />
-                            Analyzing Photos...
-                        </>
-                    ) : analysisComplete ? (
-                        <>
-                            <CheckCircle size={18} />
-                            Analysis Complete
-                        </>
-                    ) : (
-                        <>
-                            <RefreshCw size={18} />
-                            Analyze Photos
-                        </>
-                    )}
-                </button>
             </div>
         </motion.div>
     );

@@ -114,7 +114,8 @@ export const analyzeAllCategoryPhotos = async (categoryPhotos: Record<string, st
             Image Order: ${categoriesPresent.join(', ')}.
 
             For EACH image/category pair, perform validation and extraction.
-            
+            IMPORTANT: Use standard building elements (e.g., standard door width ~76-80cm, standard step riser ~17-18cm) to ESTIMATE measurements in centimeters (cm).
+
             1. Kitchen:
                - valid: Is it a kitchen?
                - turning_circle: 1500mm turning circle visible? (true/false)
@@ -139,8 +140,13 @@ export const analyzeAllCategoryPhotos = async (categoryPhotos: Record<string, st
                - step_count: number
                - step_type: 'No steps', 'Few steps', 'Steep'
                - door_width_visual: 'Wide', 'Standard', 'Narrow'
+               - estimated_door_width_cm: Estimated clear width of the door in cm (e.g., 76)
                - threshold_height: 'Flush', 'Low', 'High'
                - second_exit_indicator: Does it look like a back door / secondary exit? (true/false)
+               - lift_present: Is a lift visible? (true/false)
+               - ramp_present: Is a ramp visible? (true/false)
+               - stop_assessment_flag: Set to true IF (entrance_level is 'Upper Floor' OR 'Basement') AND (lift_present is false AND ramp_present is false). Or if step_count > 4.
+               - stop_reason: If flagged, explain why (e.g., "Upper floor property with no lift", "More than 4 steps at entrance").
 
             4. Stairs:
                - valid: Is it a staircase?
@@ -148,7 +154,11 @@ export const analyzeAllCategoryPhotos = async (categoryPhotos: Record<string, st
                - stair_type: 'Straight', 'Quarter Turn', 'Half Turn', 'Spiral'
                - handrails: 'None', 'Left', 'Right', 'Both'
                - stair_lift_present: boolean
+               - estimated_stair_width_cm: Estimated clear width of the stairs in cm. Use standard riser height/tread depth as reference.
+               - estimated_clearance_at_bottom_cm: Estimated distance from bottom step to nearest door/obstruction in cm.
                - safety_hazards: e.g. loose carpet, no handrail
+               - stop_assessment_flag: Set to true IF (stair_type is 'Straight' AND estimated_stair_width_cm <= 69.9) OR (stair_type != 'Straight' AND estimated_stair_width_cm <= 74.9) OR (estimated_clearance_at_bottom_cm < 70).
+               - stop_reason: If flagged, explain why (e.g., "Straight stairs too narrow (<70cm)", "Insufficient clearance at bottom of stairs").
 
             5. Hallway:
                - valid: Is it a hallway?
@@ -156,6 +166,9 @@ export const analyzeAllCategoryPhotos = async (categoryPhotos: Record<string, st
                - obstructions: 'None', 'Radiator', 'Furniture', 'Boxed pipes'
                - door_clearance: 'Good', 'Restricted'
                - safety_hazards: e.g. clutter, trip hazards
+               - internal_steps_present: Are there internal steps (split level) visible in the hallway? (true/false)
+               - stop_assessment_flag: Set to true IF internal_steps_present is true.
+               - stop_reason: If flagged, "Internal split level steps detected".
 
             6. Garden:
                - valid: Is it a garden/external?

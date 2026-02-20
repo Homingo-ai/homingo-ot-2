@@ -481,6 +481,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
         try {
             const updatedCase = {
                 ...caseData,
+                status: 'Completed',
                 mlData: {
                     ...caseData.mlData,
                     userOverrides: overrides,

@@ -24,7 +24,9 @@ import {
 } from "@/lib/utils/FloorPlanUtils";
 import {
   analyzeCategoryPhoto,
+  analyzeAllCategoryPhotos,
   ImageAnalysisResult,
+  BatchAnalysisResult,
 } from "@/lib/utils/ImageAnalysisUtils";
 import { toast } from "sonner";
 
@@ -100,6 +102,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
 }) => {
   const [step, setStep] = useState<number>(1);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [step3AnalysisComplete, setStep3AnalysisComplete] = useState(false);
   const [floorPlanAnalysis, setFloorPlanAnalysis] =
     useState<FloorPlanAnalysisResult | null>(null);
   const [formData, setFormData] = useState<any>(initialFormData);
@@ -224,95 +227,9 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
         ).flat();
         handleUpdateField("photos", allCategorizedPhotos);
 
-        // Trigger AI Analysis for this photo
-        setProcessingCategory(categoryId);
-        setValidationErrors(prev => {
-          const next = { ...prev };
-          delete next[categoryId];
-          return next;
-        });
-
-        try {
-          const analysisResult = await analyzeCategoryPhoto(
-            files[0],
-            categoryId,
-          );
-
-          if (analysisResult) {
-            if (analysisResult.valid) {
-              // Validation Success
-              toast.success(
-                `${categoryId.charAt(0).toUpperCase() + categoryId.slice(1)} verified!`,
-                {
-                  description: "AI detected relevant features.",
-                },
-              );
-
-              // Merge extracted data
-              const newSuggestions = {
-                ...aiSuggestions,
-                ...analysisResult.data,
-              };
-              setAiSuggestions(newSuggestions);
-
-              // Auto-fill fields if empty
-              const updates: Record<string, any> = {};
-
-              // Mapping logic
-              if (categoryId === "kitchen") {
-                if (
-                  analysisResult.data.turning_circle !== undefined &&
-                  !formData.kitchenTurningCircle
-                ) {
-                  updates.kitchenTurningCircle = analysisResult.data
-                    .turning_circle
-                    ? "Yes"
-                    : "No";
-                }
-              }
-              if (categoryId === "bathroom") {
-                if (analysisResult.data.bathing_type && !formData.bathingType)
-                  updates.bathingType = analysisResult.data.bathing_type;
-                if (analysisResult.data.toilet_type && !formData.toiletType)
-                  updates.toiletType = analysisResult.data.toilet_type;
-              }
-              if (categoryId === "entrance") {
-                if (
-                  analysisResult.data.entrance_level &&
-                  !formData.entranceLevel
-                )
-                  updates.entranceLevel = analysisResult.data.entrance_level;
-              }
-              if (categoryId === "stairs") {
-                if (
-                  analysisResult.data.has_stairs !== undefined &&
-                  !formData.internalStairs
-                ) {
-                  updates.internalStairs = analysisResult.data.has_stairs
-                    ? "Yes"
-                    : "No";
-                }
-              }
-
-              // Apply updates
-              Object.entries(updates).forEach(([key, val]) => {
-                handleUpdateField(key, val);
-              });
-            } else {
-              // Validation Failed
-              toast.warning(`Check Photo: ${categoryId}`, {
-                description:
-                  analysisResult.reason ||
-                  "This might not be the correct room.",
-              });
-              setValidationErrors(prev => ({ ...prev, [categoryId]: 'Image seems unrelated' }));
-            }
-          }
-        } catch (err) {
-          console.error("Smart capture analysis error:", err);
-        } finally {
-          setProcessingCategory(null);
-        }
+        // Reset analysis complete if new photos added? Or maybe keep it?
+        // Let's reset it to force re-analysis if they change photos
+        setStep3AnalysisComplete(false);
       } else {
         // Generic photo evidence (Step 8 or other)
         const currentPhotos = Array.isArray(formData.photos)
@@ -332,12 +249,97 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
     }
   };
 
+  const startStep3BatchAnalysis = async () => {
+    const categoryPhotos = formData.categoryPhotos || {};
+    if (Object.keys(categoryPhotos).length === 0) return;
+
+    setIsAnalyzing(true);
+    setValidationErrors({});
+
+    try {
+      const result = await analyzeAllCategoryPhotos(categoryPhotos);
+
+      if (result) {
+        // Process results
+        let hasErrors = false;
+        const newErrors: Record<string, string> = {};
+        const newSuggestions = { ...aiSuggestions };
+
+        // Handle per-category validation
+        Object.entries(result.results).forEach(([catId, res]) => {
+          if (res.valid) {
+            Object.assign(newSuggestions, res.data);
+          } else {
+            hasErrors = true;
+            newErrors[catId] = res.reason || "Image validation failed";
+          }
+        });
+
+        // Add safety suggestions
+        if (result.safety) {
+          Object.assign(newSuggestions, result.safety);
+        }
+
+        setValidationErrors(newErrors);
+        setAiSuggestions(newSuggestions);
+        setStep3AnalysisComplete(true);
+
+        if (hasErrors) {
+          toast.warning("Some photos couldn't be verified", {
+            description: "Please check the highlighted categories.",
+          });
+        } else {
+          toast.success("All photos analyzed successfully!");
+        }
+
+        // Auto-fill logic (Batch)
+        const updates: Record<string, any> = {};
+        
+        // Kitchen
+        if (newSuggestions.turning_circle !== undefined && !formData.kitchenTurningCircle) {
+           updates.kitchenTurningCircle = newSuggestions.turning_circle ? "Yes" : "No";
+        }
+        
+        // Bathroom
+        if (newSuggestions.bathing_type && !formData.bathingType) {
+           updates.bathingType = newSuggestions.bathing_type;
+        }
+        if (newSuggestions.toilet_type && !formData.toiletType) {
+           updates.toiletType = newSuggestions.toilet_type;
+        }
+
+        // Entrance
+        if (newSuggestions.entrance_level && !formData.entranceLevel) {
+           updates.entranceLevel = newSuggestions.entrance_level;
+        }
+
+        // Stairs
+        if (newSuggestions.has_stairs !== undefined && !formData.internalStairs) {
+           updates.internalStairs = newSuggestions.has_stairs ? "Yes" : "No";
+        }
+        
+        // Apply updates
+        Object.entries(updates).forEach(([key, val]) => {
+            handleUpdateField(key, val);
+        });
+
+      } else {
+        toast.error("Analysis failed. Please try again.");
+      }
+    } catch (e) {
+      console.error("Batch analysis error:", e);
+      toast.error("An error occurred during analysis.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const isNextDisabled = () => {
     if (isProcessing || isAnalyzing) return true;
     if (step === 1)
       return !formData.fullName || !formData.street || !formData.postcode;
     if (step === 2) return !formData.floorPlan && !formData.hasNoFloorPlan;
-    if (step === 3) return (formData.photos || []).length < 1; // Require at least one photo in early capture
+    if (step === 3) return (formData.photos || []).length < 1 || !step3AnalysisComplete; // Require photos AND analysis
     if (step === 4) return !formData.calibrationWidth;
     if (step === 5) return !formData.propertyType || !formData.entranceLevel;
     if (step === 6) return !formData.internalStairs;
@@ -445,6 +447,14 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 isProcessing={isProcessing}
                 processingCategory={processingCategory}
                 validationErrors={validationErrors}
+                onClearValidationError={(catId) => setValidationErrors(prev => {
+                  const next = { ...prev };
+                  delete next[catId];
+                  return next;
+                })}
+                onAnalyze={startStep3BatchAnalysis}
+                isAnalyzing={isAnalyzing}
+                analysisComplete={step3AnalysisComplete}
               />
             )}
             {step === 4 && (
@@ -488,6 +498,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 formData={formData}
                 handleUpdateField={handleUpdateField}
                 floorPlanAnalysis={floorPlanAnalysis}
+                aiSuggestions={aiSuggestions}
               />
             )}
             {step === 9 && (
@@ -587,7 +598,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
       aiScore: formData.aiReport?.AccessibilityScore
         ? parseFloat(formData.aiReport.AccessibilityScore)
         : null,
-      status: "Completed",
+      status: "Review",
       source: "Manual Entry",
       date: new Date().toISOString(),
       thumbnail:
@@ -603,6 +614,10 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
         aiReport: formData.aiReport,
       },
     };
+
+    // #region agent log
+    fetch('http://127.0.0.1:7776/ingest/358c4c1c-d29f-415a-9f11-2e32b017b478',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'420f70'},body:JSON.stringify({sessionId:'420f70',location:'AssessmentWizard.tsx:handleSafeClose',message:'Case completed',data:{completedCaseId:completedCase.id,formDataId:formData.id,isNumeric:!isNaN(Number(completedCase.id))},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
 
     onComplete(completedCase);
     onClose();

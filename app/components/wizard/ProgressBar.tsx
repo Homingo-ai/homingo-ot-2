@@ -16,7 +16,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, steps }) => {
             backdropFilter: 'blur(12px)',
             borderBottom: '1px solid var(--border)',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'space-between',
             gap: '6px',
             position: 'sticky',
@@ -35,7 +35,9 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, steps }) => {
                             alignItems: 'center',
                             gap: '4px',
                             flex: 1,
-                            position: 'relative'
+                            position: 'relative',
+                            minHeight: '48px',
+                            justifyContent: 'flex-start'
                         }}>
                             <motion.div
                                 animate={{
@@ -66,8 +68,9 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, steps }) => {
                                 letterSpacing: '0.4px',
                                 color: isActive ? 'var(--primary)' : isCompleted ? '#22c55e' : '#94a3b8',
                                 textAlign: 'center',
-                                display: idx % 2 === 0 || isActive ? 'block' : 'none',
-                                maxWidth: '60px'
+                                maxWidth: '60px',
+                                minHeight: '14px',
+                                lineHeight: '14px'
                             }}>
                                 {s.title}
                             </span>
@@ -76,11 +79,11 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, steps }) => {
                             <div style={{
                                 flex: 1,
                                 height: '2px',
+                                marginTop: '13px',
                                 background: '#e2e8f0',
-                                position: 'relative',
-                                top: '-9px',
                                 borderRadius: '2px',
-                                overflow: 'hidden'
+                                overflow: 'hidden',
+                                flexShrink: 0
                             }}>
                                 <motion.div
                                     initial={{ width: 0 }}

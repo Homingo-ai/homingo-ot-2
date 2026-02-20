@@ -57,7 +57,7 @@ const ClientInfoStep: React.FC<WizardStepProps> = ({ formData, handleUpdateField
 
                 {/* Row 2: Street */}
                 <div className="input-group">
-                    <label style={labelStyle}>Street</label>
+                    <label style={labelStyle}>Street <span style={{ color: '#ef4444' }} title="Required">*</span></label>
                     <input
                         type="text"
                         placeholder="Street Name"
@@ -71,7 +71,7 @@ const ClientInfoStep: React.FC<WizardStepProps> = ({ formData, handleUpdateField
                 {/* Row 3: Postcode, Your Full Name */}
                 <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '16px' }}>
                     <div className="input-group">
-                        <label style={labelStyle}>Postcode</label>
+                        <label style={labelStyle}>Postcode <span style={{ color: '#ef4444' }} title="Required">*</span></label>
                         <input
                             type="text"
                             placeholder="Postcode"
@@ -82,7 +82,7 @@ const ClientInfoStep: React.FC<WizardStepProps> = ({ formData, handleUpdateField
                         />
                     </div>
                     <div className="input-group">
-                        <label style={labelStyle}>Your Full Name</label>
+                        <label style={labelStyle}>Your Full Name <span style={{ color: '#ef4444' }} title="Required">*</span></label>
                         <input
                             type="text"
                             placeholder="e.g. John Smith"

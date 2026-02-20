@@ -8,8 +8,22 @@ import { AIConfirmationCard } from '../AIConfirmationCard';
 const SafetyHazardsStep: React.FC<WizardStepProps> = ({
     formData,
     handleUpdateField,
-    floorPlanAnalysis
+    floorPlanAnalysis,
+    aiSuggestions
 }) => {
+    // Collect AI hazards
+    const aiHazards: string[] = [];
+    if (aiSuggestions?.suggested_hazards) {
+        aiSuggestions.suggested_hazards.split(',').forEach((h: string) => aiHazards.push(h.trim()));
+    }
+    // Check specific fields
+    if (aiSuggestions?.obstructions && aiSuggestions.obstructions !== 'None') {
+        aiHazards.push(`Obstruction: ${aiSuggestions.obstructions}`);
+    }
+    if (aiSuggestions?.door_clearance === 'Restricted') {
+        aiHazards.push('Restricted door clearance');
+    }
+
     return (
         <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -28,7 +42,11 @@ const SafetyHazardsStep: React.FC<WizardStepProps> = ({
                     label="Emergency Exit (Second Exit)"
                     description="Presence of a secondary escape route (back door, etc.)"
                     icon={<Undo2 size={22} />}
-                    detectedValue={floorPlanAnalysis?.second_exit?.detected ? 'Yes' : 'No'}
+                    detectedValue={
+                        floorPlanAnalysis?.second_exit?.detected ? 'Yes' :
+                        aiSuggestions?.second_exit_suggested !== undefined ? (aiSuggestions.second_exit_suggested ? 'Yes' : 'No') :
+                        null
+                    }
                     confidence={floorPlanAnalysis?.second_exit?.confidence}
                     userValue={formData.secondExit}
                     options={['Yes', 'No']}
@@ -88,7 +106,7 @@ const SafetyHazardsStep: React.FC<WizardStepProps> = ({
                             outline: 'none', resize: 'vertical', lineHeight: '1.5'
                         }}
                     />
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {['Trip Hazards', 'Poor Lighting', 'Damp/Mould'].map(tag => (
                             <button
                                 key={tag}
@@ -99,6 +117,31 @@ const SafetyHazardsStep: React.FC<WizardStepProps> = ({
                                 style={{ padding: '4px 10px', borderRadius: '8px', background: '#f1f5f9', border: 'none', fontSize: '11px', fontWeight: '700', color: '#64748b', cursor: 'pointer' }}
                             >
                                 + {tag}
+                            </button>
+                        ))}
+                        {/* AI Suggested Hazards */}
+                        {aiHazards.map((tag, idx) => (
+                            <button
+                                key={`ai-${idx}`}
+                                onClick={() => {
+                                    const current = formData.hazards || '';
+                                    if (!current.includes(tag)) handleUpdateField('hazards', current ? `${current}, ${tag}` : tag);
+                                }}
+                                style={{ 
+                                    padding: '4px 10px', 
+                                    borderRadius: '8px', 
+                                    background: '#ecfdf5', 
+                                    border: '1px solid #a7f3d0', 
+                                    fontSize: '11px', 
+                                    fontWeight: '700', 
+                                    color: '#059669', 
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }}
+                            >
+                                <ShieldAlert size={10} /> AI: {tag}
                             </button>
                         ))}
                     </div>

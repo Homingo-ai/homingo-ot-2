@@ -22,10 +22,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, cases, onSelectCase, search
     const stats = useMemo(() => {
         const total = cases.length;
         const finalized = cases.filter(c => c.status === 'Completed').length;
+        const inReview = cases.filter(c => c.status === 'Review').length;
         const inProgress = cases.filter(c => c.status === 'Pending').length;
         const drafts = cases.filter(c => c.status === 'Draft').length;
 
-        return { total, finalized, inProgress, drafts };
+        return { total, finalized, inReview, inProgress, drafts };
     }, [cases]);
 
     // Filter and sort cases
@@ -35,6 +36,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, cases, onSelectCase, search
         // Apply status filter
         if (activeFilter === 'Finalized') {
             filtered = filtered.filter(c => c.status === 'Completed');
+        } else if (activeFilter === 'In Review') {
+            filtered = filtered.filter(c => c.status === 'Review');
         } else if (activeFilter === 'In Progress') {
             filtered = filtered.filter(c => c.status === 'Pending');
         } else if (activeFilter === 'Drafts') {
@@ -67,7 +70,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, cases, onSelectCase, search
         return filtered;
     }, [cases, activeFilter, searchTerm, sortBy]);
 
-    const filters = ['All Cases', 'Finalized', 'In Progress', 'Drafts'];
+    const filters = ['All Cases', 'Finalized', 'In Review', 'In Progress', 'Drafts'];
 
     return (
         <div style={{
@@ -98,7 +101,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, cases, onSelectCase, search
             {/* Statistics Cards */}
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
                 gap: '20px',
                 marginBottom: '32px'
             }}>
@@ -166,6 +169,40 @@ const Dashboard: React.FC<DashboardProps> = ({ user, cases, onSelectCase, search
                         lineHeight: '1'
                     }}>
                         {stats.finalized}
+                    </div>
+                </div>
+
+                <div style={{
+                    background: '#fff',
+                    padding: '24px',
+                    borderRadius: '16px',
+                    border: '2px solid #d97706',
+                    boxShadow: '0 4px 12px rgba(217, 119, 6, 0.1)'
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        marginBottom: '12px'
+                    }}>
+                        <Clock size={24} color="#d97706" />
+                        <span style={{
+                            fontSize: '13px',
+                            color: '#64748b',
+                            fontWeight: '600',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                        }}>
+                            In Review
+                        </span>
+                    </div>
+                    <div style={{
+                        fontSize: '36px',
+                        fontWeight: '800',
+                        color: '#d97706',
+                        lineHeight: '1'
+                    }}>
+                        {stats.inReview}
                     </div>
                 </div>
 
@@ -433,8 +470,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, cases, onSelectCase, search
                                             padding: '6px 12px',
                                             borderRadius: '8px',
                                             background: c.status === 'Completed' ? '#ecfdf5' :
+                                                c.status === 'Review' ? '#fffbeb' :
                                                 c.status === 'Draft' ? '#f8fafc' : '#fff7ed',
                                             color: c.status === 'Completed' ? '#059669' :
+                                                c.status === 'Review' ? '#d97706' :
                                                 c.status === 'Draft' ? '#64748b' : '#ea580c',
                                             textTransform: 'uppercase',
                                             letterSpacing: '0.3px'
@@ -446,6 +485,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, cases, onSelectCase, search
                                                 background: 'currentColor'
                                             }} />
                                             {c.status === 'Completed' ? 'Finalized' :
+                                                c.status === 'Review' ? 'In Review' :
                                                 c.status === 'Pending' ? 'In Progress' : c.status}
                                         </span>
                                     </td>

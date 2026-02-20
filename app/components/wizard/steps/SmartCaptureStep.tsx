@@ -19,9 +19,14 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
     handlePhotoUpload,
     isProcessing,
     processingCategory,
-    validationErrors
+    validationErrors,
+    onClearValidationError,
+    onAnalyze,
+    isAnalyzing,
+    analysisComplete
 }) => {
     const categoryPhotos = formData.categoryPhotos || {};
+    const hasPhotos = Object.values(categoryPhotos).flat().length > 0;
 
     const removePhoto = (catId: string, photoIndex: number) => {
         const currentCatPhotos = [...(categoryPhotos[catId] || [])];
@@ -33,6 +38,9 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
         // Keep global photos list in sync
         const allCategorizedPhotos = Object.values(updatedCategoryPhotos).flat();
         handleUpdateField('photos', allCategorizedPhotos);
+
+        // Clear validation error when unrelated photo is removed
+        onClearValidationError?.(catId);
     };
 
     return (
@@ -58,17 +66,19 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                     {isProcessing && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'var(--primary-light)', borderRadius: '10px', color: 'var(--primary)', fontWeight: '700', fontSize: '12px' }}>
                             <RefreshCw className="animate-spin" size={14} />
-                            Processing...
+                            Uploading...
                         </div>
                     )}
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                 {CAPTURE_CATEGORIES.filter(cat => !cat.condition || cat.condition(formData)).map(cat => {
                     const currentPhotos = categoryPhotos[cat.id] || [];
                     const isFull = currentPhotos.length >= 3;
                     const hasError = validationErrors?.[cat.id];
+
+                    const isUploadBlocked = isProcessing || isAnalyzing;
 
                     return (
                         <div key={cat.id} style={{
@@ -84,22 +94,11 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div>
-                                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b', marginBottom: '2px' }}>{cat.title}</h4>
+                                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        {cat.title}
+                                        {cat.required && <span style={{ color: '#ef4444', fontSize: '12px' }} title="Required">*</span>}
+                                    </h4>
                                     <p style={{ fontSize: '11px', color: '#64748b' }}>{cat.desc}</p>
-                                    {isProcessing && processingCategory === cat.id && (
-                                        <div style={{ 
-                                            marginTop: '8px', 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            gap: '4px', 
-                                            fontSize: '10px', 
-                                            color: 'var(--primary)', 
-                                            fontWeight: '700' 
-                                        }}>
-                                            <RefreshCw className="animate-spin" size={10} />
-                                            Analyzing...
-                                        </div>
-                                    )}
                                     {hasError && (
                                         <div style={{ 
                                             marginTop: '4px', 
@@ -122,18 +121,22 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                                {currentPhotos.map((photo: string, idx: number) => (
-                                    <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                                        <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        <button
-                                            onClick={() => removePhoto(cat.id, idx)}
-                                            style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
-                                            <Trash2 size={10} />
-                                        </button>
-                                    </div>
-                                ))}
+                                {currentPhotos.map((photo: string, idx: number) => {
+                                    return (
+                                        <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                                            <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <button
+                                                onClick={() => removePhoto(cat.id, idx)}
+                                                disabled={isAnalyzing}
+                                                style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: isAnalyzing ? 'not-allowed' : 'pointer', zIndex: 10 }}>
+                                                <Trash2 size={10} />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
                                 {!isFull && (
                                     <label style={{
+                                        position: 'relative',
                                         aspectRatio: '1',
                                         background: '#f8fafc',
                                         borderRadius: '8px',
@@ -142,21 +145,33 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                                         flexDirection: 'column',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        cursor: 'pointer',
+                                        cursor: isUploadBlocked ? 'not-allowed' : 'pointer',
                                         transition: 'all 0.2s',
                                         gridColumn: currentPhotos.length === 0 ? 'span 3' : 'span 1',
-                                        height: currentPhotos.length === 0 ? '80px' : 'auto'
+                                        height: currentPhotos.length === 0 ? '80px' : 'auto',
+                                        opacity: isUploadBlocked ? 0.7 : 1
                                     }}
-                                        onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--primary)', e.currentTarget.style.background = 'var(--primary-light)')}
-                                        onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#cbd5e1', e.currentTarget.style.background = '#f8fafc')}
+                                        onMouseEnter={(e) => !isUploadBlocked && (e.currentTarget.style.borderColor = 'var(--primary)', e.currentTarget.style.background = 'var(--primary-light)')}
+                                        onMouseLeave={(e) => !isUploadBlocked && (e.currentTarget.style.borderColor = '#cbd5e1', e.currentTarget.style.background = '#f8fafc')}
                                     >
+                                        {isUploadBlocked && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                inset: 0,
+                                                background: 'rgba(148, 163, 184, 0.4)',
+                                                borderRadius: '8px',
+                                                zIndex: 10,
+                                                cursor: 'not-allowed',
+                                                pointerEvents: 'auto'
+                                            }} />
+                                        )}
                                         <input
                                             type="file"
                                             accept="image/*"
                                             hidden
                                             onChange={(e) => handlePhotoUpload && handlePhotoUpload(e, cat.id)}
                                             multiple={false}
-                                            disabled={isProcessing}
+                                            disabled={isUploadBlocked}
                                         />
                                         <Camera size={currentPhotos.length === 0 ? 20 : 16} color="#94a3b8" />
                                         {currentPhotos.length === 0 && <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginTop: '4px' }}>Add Photo</span>}
@@ -166,6 +181,47 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                         </div>
                     );
                 })}
+            </div>
+
+            {/* Analysis Action */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+                <button
+                    onClick={onAnalyze}
+                    disabled={!hasPhotos || isAnalyzing || isProcessing || analysisComplete}
+                    style={{
+                        padding: '12px 24px',
+                        borderRadius: '16px',
+                        background: analysisComplete ? '#dcfce7' : isAnalyzing ? 'var(--primary-light)' : 'var(--primary)',
+                        color: analysisComplete ? '#166534' : isAnalyzing ? 'var(--primary)' : '#fff',
+                        border: analysisComplete ? '1px solid #bbf7d0' : 'none',
+                        fontSize: '14px',
+                        fontWeight: '700',
+                        cursor: (!hasPhotos || isAnalyzing || isProcessing || analysisComplete) ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        opacity: (!hasPhotos && !isAnalyzing && !analysisComplete) ? 0.6 : 1,
+                        transition: 'all 0.2s',
+                        boxShadow: analysisComplete ? 'none' : '0 4px 12px rgba(99, 102, 241, 0.3)'
+                    }}
+                >
+                    {isAnalyzing ? (
+                        <>
+                            <RefreshCw className="animate-spin" size={18} />
+                            Analyzing Photos...
+                        </>
+                    ) : analysisComplete ? (
+                        <>
+                            <CheckCircle size={18} />
+                            Analysis Complete
+                        </>
+                    ) : (
+                        <>
+                            <RefreshCw size={18} />
+                            Analyze Photos
+                        </>
+                    )}
+                </button>
             </div>
         </motion.div>
     );

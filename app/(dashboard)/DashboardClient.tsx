@@ -6,6 +6,8 @@ import Dashboard from '../components/dashboard/Dashboard';
 import AssessmentWizard from '../components/wizard/AssessmentWizard';
 import { Case } from '@/types/dashboard';
 import { useRouter } from 'next/navigation';
+import { saveSurveyClient } from '@/lib/surveys/client';
+import { toast } from 'sonner';
 
 interface DashboardClientProps {
     initialCases: Case[];
@@ -30,11 +32,25 @@ export default function DashboardClient({ initialCases, user }: DashboardClientP
         setIsWizardOpen(true);
     };
 
-    const handleCompleteWizard = (newCase: Case) => {
-        setCases([newCase, ...cases]);
+    const handleCompleteWizard = async (newCase: Case) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7776/ingest/358c4c1c-d29f-415a-9f11-2e32b017b478',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'420f70'},body:JSON.stringify({sessionId:'420f70',location:'DashboardClient.tsx:handleCompleteWizard',message:'Wizard completed',data:{newCaseId:newCase?.id,isNumeric:!isNaN(Number(newCase?.id))},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
         setIsWizardOpen(false);
-        // Navigate to the new case detail page
-        router.push(`/cases/${newCase.id}`);
+        try {
+            const result = await saveSurveyClient(newCase);
+            if (result.error) {
+                toast.error(`Failed to save: ${result.error}`);
+                return;
+            }
+            toast.success('Assessment saved successfully');
+            const realId = result.id ?? newCase.id;
+            setCases([{ ...newCase, id: realId }, ...cases]);
+            router.push(`/cases/${realId}`);
+        } catch (error) {
+            console.error(error);
+            toast.error('An unexpected error occurred');
+        }
     };
 
     return (

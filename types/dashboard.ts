@@ -32,5 +32,7 @@ export interface Case {
         wizardData: any;
         aiReport?: AiReport;
         rawAhr?: any;
+        userOverrides?: Record<string, any>;
+        isLocked?: boolean;
     };
 }

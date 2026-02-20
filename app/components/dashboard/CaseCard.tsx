@@ -29,6 +29,14 @@ const CaseCard: React.FC<CaseCardProps> = ({ caseData, onClick }) => {
                     border: '#a7f3d0',
                     label: 'Finalized'
                 };
+            case 'Review':
+                return {
+                    icon: Clock,
+                    color: '#d97706',
+                    bg: '#fffbeb',
+                    border: '#fde68a',
+                    label: 'In Review'
+                };
             case 'Draft':
                 return {
                     icon: FileText,

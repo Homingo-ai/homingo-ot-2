@@ -475,7 +475,7 @@ const ValidationInterface: React.FC<ValidationInterfaceProps> = ({ caseData, onB
         setTimeout(() => {
             const updatedCase: Case = {
                 ...caseData,
-                status: "Completed",
+                status: "Review",
                 mlData: {
                     ...caseData.mlData,
                     aiReport: {
@@ -861,7 +861,7 @@ const ValidationInterface: React.FC<ValidationInterfaceProps> = ({ caseData, onB
 
                     <button
                         disabled={isSubmitting || isRescoring}
-                        onClick={caseData.status === 'Completed' ? onOpenReport : handleSubmit}
+                        onClick={(caseData.status === 'Completed' || caseData.status === 'Review') ? onOpenReport : handleSubmit}
                         style={{
                             padding: '14px 32px',
                             borderRadius: '12px',
@@ -882,7 +882,7 @@ const ValidationInterface: React.FC<ValidationInterfaceProps> = ({ caseData, onB
                                 <Loader className="spin" size={20} />
                                 Processing...
                             </>
-                        ) : caseData.status === 'Completed' ? (
+                        ) : (caseData.status === 'Completed' || caseData.status === 'Review') ? (
                             <>
                                 View Report
                                 <ArrowRight size={20} />

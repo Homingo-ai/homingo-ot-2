@@ -15,4 +15,7 @@ export interface WizardStepProps {
   processingCategory?: string | null;
   aiSuggestions?: Record<string, any>;
   validationErrors?: Record<string, string>;
+  onClearValidationError?: (categoryId: string) => void;
+  onAnalyze?: () => void;
+  analysisComplete?: boolean;
 }

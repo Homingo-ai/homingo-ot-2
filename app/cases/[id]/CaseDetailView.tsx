@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Case } from '@/types/dashboard';
 import ReportView from '@/app/components/report/ReportView';
 import { useRouter } from 'next/navigation';
-import { saveSurvey } from '@/lib/surveys/actions';
+import { saveSurveyClient } from '@/lib/surveys/client';
 import { toast } from 'sonner';
 import { ArrowLeft, CheckCircle, AlertTriangle, Info, FileText, List, Lock, Clock } from 'lucide-react';
 
@@ -18,8 +18,8 @@ const CaseDetailView: React.FC<CaseDetailViewProps> = ({ caseData }) => {
     const { aiReport } = caseData.mlData || {};
     const summary = aiReport?.Summary;
     
-    // Status Logic: If not completed/locked, show as In Review
-    const isLocked = caseData.status === 'Completed';
+    // Status Logic: Locked when Finalize clicked on AHR report (mlData.isLocked or status Completed)
+    const isLocked = !!(caseData.mlData?.isLocked || caseData.status === 'Completed');
     const displayStatus = isLocked ? 'Finalized & Locked' : 'In Review';
     const statusColor = isLocked ? '#059669' : '#d97706';
     const statusBg = isLocked ? '#ecfdf5' : '#fffbeb';
@@ -27,7 +27,7 @@ const CaseDetailView: React.FC<CaseDetailViewProps> = ({ caseData }) => {
 
     const handleUpdateCase = async (updatedCase: Case) => {
         try {
-            const result = await saveSurvey(updatedCase);
+            const result = await saveSurveyClient(updatedCase);
             if (result.error) {
                 toast.error(`Failed to save: ${result.error}`);
             } else {

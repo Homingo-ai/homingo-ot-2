@@ -6,7 +6,7 @@ import ReportView from '@/app/components/report/ReportView';
 import { useRouter } from 'next/navigation';
 import { saveSurvey } from '@/lib/surveys/actions';
 import { toast } from 'sonner';
-import { ArrowLeft, CheckCircle, AlertTriangle, Info, FileText, List } from 'lucide-react';
+import { ArrowLeft, CheckCircle, AlertTriangle, Info, FileText, List, Lock, Clock } from 'lucide-react';
 
 interface CaseDetailViewProps {
     caseData: Case;
@@ -17,6 +17,13 @@ const CaseDetailView: React.FC<CaseDetailViewProps> = ({ caseData }) => {
     const [activeTab, setActiveTab] = useState<'details' | 'ahr'>('details');
     const { aiReport } = caseData.mlData || {};
     const summary = aiReport?.Summary;
+    
+    // Status Logic: If not completed/locked, show as In Review
+    const isLocked = caseData.status === 'Completed';
+    const displayStatus = isLocked ? 'Finalized & Locked' : 'In Review';
+    const statusColor = isLocked ? '#059669' : '#d97706';
+    const statusBg = isLocked ? '#ecfdf5' : '#fffbeb';
+    const StatusIcon = isLocked ? Lock : Clock;
 
     const handleUpdateCase = async (updatedCase: Case) => {
         try {
@@ -79,7 +86,24 @@ const CaseDetailView: React.FC<CaseDetailViewProps> = ({ caseData }) => {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '8px', background: '#f1f5f9', padding: '4px', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            background: statusBg,
+                            color: statusColor,
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            border: `1px solid ${statusColor}20`
+                        }}>
+                            <StatusIcon size={14} />
+                            {displayStatus}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px', background: '#f1f5f9', padding: '4px', borderRadius: '8px' }}>
                         <button
                             onClick={() => setActiveTab('details')}
                             style={{
@@ -129,41 +153,69 @@ const CaseDetailView: React.FC<CaseDetailViewProps> = ({ caseData }) => {
             <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 24px' }}>
                 {activeTab === 'details' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        {/* Applicant Info */}
+                        {/* Applicant Info & Thumbnail */}
                         <div style={{
                             background: '#fff',
                             borderRadius: '16px',
                             border: '1px solid #e2e8f0',
                             padding: '24px',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                            display: 'flex',
+                            gap: '32px',
+                            alignItems: 'start'
                         }}>
-                            <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '24px' }}>
-                                Applicant Information
-                            </h2>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px' }}>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
-                                        Name
-                                    </label>
-                                    <p style={{ fontSize: '15px', fontWeight: '500', color: '#0f172a', margin: 0 }}>
-                                        {caseData.applicantName || 'Not specified'}
-                                    </p>
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
-                                        Contact
-                                    </label>
-                                    <p style={{ fontSize: '15px', fontWeight: '500', color: '#0f172a', margin: 0 }}>
-                                        {caseData.phoneNumber || 'Not specified'}
-                                    </p>
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
-                                        Assessment Date
-                                    </label>
-                                    <p style={{ fontSize: '15px', fontWeight: '500', color: '#0f172a', margin: 0 }}>
-                                        {caseData.assessmentDate ? new Date(caseData.assessmentDate).toLocaleDateString() : 'Not set'}
-                                    </p>
+                            {/* Thumbnail Image */}
+                            <div style={{
+                                width: '200px',
+                                height: '150px',
+                                flexShrink: 0,
+                                borderRadius: '12px',
+                                overflow: 'hidden',
+                                border: '1px solid #e2e8f0',
+                                background: '#f1f5f9'
+                            }}>
+                                {caseData.thumbnail ? (
+                                    <img 
+                                        src={caseData.thumbnail} 
+                                        alt="Property Thumbnail" 
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                ) : (
+                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                                        <Info size={32} />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={{ flex: 1 }}>
+                                <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '24px' }}>
+                                    Case Details
+                                </h2>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                            Name
+                                        </label>
+                                        <p style={{ fontSize: '15px', fontWeight: '500', color: '#0f172a', margin: 0 }}>
+                                            {caseData.applicantName || 'Not specified'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                            Contact
+                                        </label>
+                                        <p style={{ fontSize: '15px', fontWeight: '500', color: '#0f172a', margin: 0 }}>
+                                            {caseData.phoneNumber || 'Not specified'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                            Assessment Date
+                                        </label>
+                                        <p style={{ fontSize: '15px', fontWeight: '500', color: '#0f172a', margin: 0 }}>
+                                            {caseData.assessmentDate ? new Date(caseData.assessmentDate).toLocaleDateString() : 'Not set'}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

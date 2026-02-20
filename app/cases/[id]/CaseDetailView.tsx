@@ -149,6 +149,7 @@ const CaseDetailView: React.FC<CaseDetailViewProps> = ({ caseData }) => {
                     </div>
                 </div>
             </div>
+            </div>
 
             <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 24px' }}>
                 {activeTab === 'details' && (

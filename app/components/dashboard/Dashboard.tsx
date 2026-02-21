@@ -143,22 +143,22 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border-2 border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.1)]">
+        <div className="bg-emerald-50 p-6 rounded-2xl border-2 border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.1)]">
           <div className="flex items-center gap-3 mb-3">
             <Shield size={24} className="text-emerald-500" />
-            <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+            <span className="text-xs text-emerald-700 font-semibold uppercase tracking-wider">
               Finalized Reports
             </span>
           </div>
-          <div className="text-4xl font-extrabold text-emerald-500 leading-none">
+          <div className="text-4xl font-extrabold text-emerald-600 leading-none">
             {stats.finalized}
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border-2 border-amber-600 shadow-[0_4px_12px_rgba(217,119,6,0.1)]">
+        <div className="bg-amber-50 p-6 rounded-2xl border-2 border-amber-600 shadow-[0_4px_12px_rgba(217,119,6,0.1)]">
           <div className="flex items-center gap-3 mb-3">
             <Clock size={24} className="text-amber-600" />
-            <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+            <span className="text-xs text-amber-800 font-semibold uppercase tracking-wider">
               In Review
             </span>
           </div>
@@ -167,26 +167,26 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border-2 border-amber-500 shadow-[0_4px_12px_rgba(245,158,11,0.1)]">
+        <div className="bg-orange-50 p-6 rounded-2xl border-2 border-orange-500 shadow-[0_4px_12px_rgba(245,158,11,0.1)]">
           <div className="flex items-center gap-3 mb-3">
-            <Clock size={24} className="text-amber-500" />
-            <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+            <Clock size={24} className="text-orange-500" />
+            <span className="text-xs text-orange-700 font-semibold uppercase tracking-wider">
               In Progress
             </span>
           </div>
-          <div className="text-4xl font-extrabold text-amber-500 leading-none">
+          <div className="text-4xl font-extrabold text-orange-600 leading-none">
             {stats.inProgress}
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border-2 border-slate-400 shadow-[0_4px_12px_rgba(148,163,184,0.1)]">
+        <div className="bg-slate-100 p-6 rounded-2xl border-2 border-slate-400 shadow-[0_4px_12px_rgba(148,163,184,0.1)]">
           <div className="flex items-center gap-3 mb-3">
-            <FileText size={24} className="text-slate-400" />
-            <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+            <FileText size={24} className="text-slate-500" />
+            <span className="text-xs text-slate-600 font-semibold uppercase tracking-wider">
               Draft Queue
             </span>
           </div>
-          <div className="text-4xl font-extrabold text-slate-400 leading-none">
+          <div className="text-4xl font-extrabold text-slate-600 leading-none">
             {stats.drafts}
           </div>
         </div>

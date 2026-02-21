@@ -19,7 +19,7 @@ import {
 import { formatBritishDateTime } from "@/lib/utils/dateFormatter";
 import { Case } from "@/types/dashboard";
 import { ConfidenceBadge } from "../wizard/ConfidenceBadge";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
 
 interface ReportViewProps {
@@ -332,7 +332,7 @@ const ComplianceSummary = ({
       </div>
     </div>
 
-    {risks && risks.length > 0 && (
+    {(
       <div
         style={{
           marginTop: "16px",
@@ -361,21 +361,33 @@ const ComplianceSummary = ({
             gap: "8px",
           }}
         >
-          {risks.map((risk: any, i: number) => (
-            <div
-              key={i}
-              style={{
-                fontSize: "12px",
-                color: "#b91c1c",
-                background: "#fef2f2",
-                padding: "8px 12px",
-                borderRadius: "6px",
-                border: "1px solid #fecaca",
-              }}
-            >
-              <strong>{risk.ruleId}:</strong> {risk.description}
-            </div>
-          ))}
+          {(risks && risks.length > 0)
+            ? risks.map((risk: any, i: number) => (
+                <div
+                  key={i}
+                  style={{
+                    fontSize: "12px",
+                    color: "#b91c1c",
+                    background: "#fef2f2",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid #fecaca",
+                  }}
+                >
+                  <strong>{risk.ruleId}:</strong> {risk.description}
+                </div>
+              ))
+            : (
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#64748b",
+                    padding: "8px 0",
+                  }}
+                >
+                  None identified
+                </div>
+              )}
         </div>
       </div>
     )}
@@ -1321,7 +1333,7 @@ const ReportView: React.FC<ReportViewProps> = ({
 
   const generatePDFBlob = async (): Promise<jsPDF | null> => {
     if (!reportRef.current) return null;
-    const pages = reportRef.current.querySelectorAll<HTMLElement>(".ahr-page");
+    const pages = Array.from(reportRef.current.querySelectorAll(".ahr-page"));
     if (pages.length === 0) return null;
 
     const pdf = new jsPDF({
@@ -1331,62 +1343,53 @@ const ReportView: React.FC<ReportViewProps> = ({
     });
     const pdfWidth = 210;
     const pdfHeight = 297;
-
-    // Fixed pixel width for A4 at 96dpi
-    const captureWidthPx = 794;
-    const a4Ratio = pdfHeight / pdfWidth;
+    // A4 at 96 DPI is approx 794x1123
+    const pixelWidth = 794;
+    const pixelHeight = 1123;
 
     for (let i = 0; i < pages.length; i++) {
-      const page = pages[i];
+      if (i > 0) pdf.addPage();
+      const page = pages[i] as HTMLElement;
 
-      // Save original styles
-      const orig = {
-        width: page.style.width,
-        minHeight: page.style.minHeight,
-        height: page.style.height,
-        maxWidth: page.style.maxWidth,
-        borderRadius: page.style.borderRadius,
-        boxShadow: page.style.boxShadow,
-        padding: page.style.padding,
-      };
+      // Clone to offscreen A4 container to ensure consistent rendering
+      const tempContainer = document.createElement("div");
+      tempContainer.style.position = "absolute";
+      tempContainer.style.left = "-9999px";
+      tempContainer.style.top = "0";
+      tempContainer.style.width = `${pixelWidth}px`;
+      tempContainer.style.minHeight = `${pixelHeight}px`;
+      document.body.appendChild(tempContainer);
 
-      // Force A4-proportioned rendering
-      page.style.width = `${captureWidthPx}px`;
-      page.style.maxWidth = `${captureWidthPx}px`;
-      page.style.minHeight = `${Math.round(captureWidthPx * a4Ratio)}px`;
-      page.style.height = "auto";
-      page.style.borderRadius = "0";
-      page.style.boxShadow = "none";
-      page.style.padding = "30px 36px";
+      const clone = page.cloneNode(true) as HTMLElement;
+      clone.style.width = "100%";
+      clone.style.minHeight = `${pixelHeight}px`;
+      clone.style.margin = "0";
+      clone.style.padding = "40px"; // Ensure padding
+      clone.style.boxShadow = "none";
+      clone.style.borderRadius = "0";
+      clone.style.background = "#fff";
 
-      await new Promise((r) => setTimeout(r, 50));
+      tempContainer.appendChild(clone);
 
-      const canvas = await html2canvas(page, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-        width: captureWidthPx,
-      });
+      try {
+        const canvas = await html2canvas(clone, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+          width: pixelWidth,
+          height: pixelHeight,
+          windowWidth: pixelWidth,
+          windowHeight: pixelHeight,
+        });
 
-      // Restore original styles
-      Object.assign(page.style, orig);
-
-      const imgData = canvas.toDataURL("image/jpeg", 0.92);
-      const totalImgHeight = (canvas.height / canvas.width) * pdfWidth;
-      const pageCount = Math.ceil(totalImgHeight / pdfHeight);
-
-      for (let p = 0; p < pageCount; p++) {
-        if (i > 0 || p > 0) pdf.addPage();
-        pdf.addImage(
-          imgData,
-          "JPEG",
-          0,
-          -(p * pdfHeight),
-          pdfWidth,
-          totalImgHeight,
-        );
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+      } catch (e) {
+        console.error("Page capture failed", e);
+      } finally {
+        document.body.removeChild(tempContainer);
       }
     }
     return pdf;
@@ -1833,8 +1836,7 @@ const ReportView: React.FC<ReportViewProps> = ({
                   onClick={() => handleOverride("multipleProperties", "No")}
                 />
               </div>
-              {getVal("multipleProperties", wizardData.multipleProperties) ===
-                "Yes" && (
+              {(
                 <div
                   style={{
                     display: "flex",
@@ -2563,11 +2565,7 @@ const ReportView: React.FC<ReportViewProps> = ({
                     onClick={() => handleOverride("communalDoorPresent", false)}
                   />
                 </div>
-                {isYes(
-                  "communalDoorPresent",
-                  rawAhr.external_access?.communal_front_door?.present ??
-                    wizardData.communalDoorPresent === "Y",
-                ) && (
+                {(
                   <div
                     style={{
                       flex: 1,
@@ -2884,10 +2882,7 @@ const ReportView: React.FC<ReportViewProps> = ({
                   </div>
                 </div>
 
-                {isYes(
-                  "communalRampPresent",
-                  rawAhr.external_access?.ramps?.communal?.present ?? false,
-                ) && (
+                {(
                   <div
                     style={{
                       flex: 1,
@@ -3561,10 +3556,7 @@ const ReportView: React.FC<ReportViewProps> = ({
                     onClick={() => handleOverride("communalLiftPresent", false)}
                   />
                 </div>
-                {isYes(
-                  "communalLiftPresent",
-                  rawAhr.external_access?.lift_details?.present ?? false,
-                ) && (
+                {(
                   <div
                     style={{
                       flex: 1,
@@ -3836,10 +3828,7 @@ const ReportView: React.FC<ReportViewProps> = ({
                     onClick={() => handleOverride("propertyDoorPresent", false)}
                   />
                 </div>
-                {isYes(
-                  "propertyDoorPresent",
-                  rawAhr.external_access?.property_front_door?.present ?? true,
-                ) && (
+                {(
                   <div
                     style={{
                       flex: 1,
@@ -3983,6 +3972,21 @@ const ReportView: React.FC<ReportViewProps> = ({
               </div>
             </div>
 
+          </SectionBlock>
+        </div>
+
+        {/* --- PAGE 3: SECTION D (Part 7) & SECTION E (Parts 8-11) --- */}
+        <div
+          className="ahr-page"
+          style={{
+            background: "#fff",
+            padding: "30px 40px",
+            borderRadius: "24px",
+            boxShadow: "0 10px 40px rgba(0,0,0,0.04)",
+            minHeight: "1120px",
+          }}
+        >
+          <SectionBlock title="SECTION D (Continued)" number="">
             {/* 7. Property Ramp */}
             <div style={{ marginTop: "20px" }}>
               <div
@@ -4144,10 +4148,7 @@ const ReportView: React.FC<ReportViewProps> = ({
                   </div>
                 </div>
 
-                {isYes(
-                  "propertyRampPresent",
-                  rawAhr.external_access?.ramps?.property?.present ?? false,
-                ) && (
+                {(
                   <div
                     style={{
                       flex: 1,
@@ -5117,7 +5118,21 @@ const ReportView: React.FC<ReportViewProps> = ({
                 </div>
               </div>
             </div>
+          </SectionBlock>
+        </div>
 
+        {/* --- PAGE 4: Parts 12, 13, 14, 15 --- */}
+        <div
+          className="ahr-page"
+          style={{
+            background: "#fff",
+            padding: "30px 40px",
+            borderRadius: "24px",
+            boxShadow: "0 10px 40px rgba(0,0,0,0.04)",
+            minHeight: "1120px",
+          }}
+        >
+          <SectionBlock title="SECTION E (Continued)" number="">
             {/* 12. Internal Stairs */}
             <div style={{ marginBottom: "20px", paddingBottom: "14px" }}>
               <h3
@@ -5919,10 +5934,7 @@ const ReportView: React.FC<ReportViewProps> = ({
                   </div>
                 </div>
 
-                {isYes(
-                  "secondExitRampPresent",
-                  rawAhr.context_amenities?.second_exit?.ramped ?? false,
-                ) && (
+                {(
                   <div
                     style={{
                       flex: 1,
@@ -6905,7 +6917,7 @@ const ReportView: React.FC<ReportViewProps> = ({
           </SectionBlock>
         </div>
 
-        {/* --- PAGE 3: TECHNICAL SPECIFICATIONS & ADAPTABILITY --- */}
+        {/* --- PAGE 5: Parts 16, 17, 18, 19, 20, 21 --- */}
         <div
           className="ahr-page"
           style={{
@@ -6916,7 +6928,7 @@ const ReportView: React.FC<ReportViewProps> = ({
             minHeight: "1120px",
           }}
         >
-          <SectionBlock title="SECTION F" number="">
+          <SectionBlock title="SECTION E (Continued)" number="">
             {/* Left Side: Hallway & Storage */}
             <div>
               {/* 16. Hallway */}
@@ -7268,11 +7280,7 @@ const ReportView: React.FC<ReportViewProps> = ({
                     }
                   />
                 </div>
-                {isYes(
-                  "wheelchairStoragePresent",
-                  rawAhr.internal_circulation?.wheelchair_storage?.present ??
-                    wizardData.wheelchairStoragePresent === "Y",
-                ) && (
+                {(
                   <div style={{ flex: 1 }}>
                     <div
                       style={{
@@ -7439,7 +7447,8 @@ const ReportView: React.FC<ReportViewProps> = ({
                 )}
               </div>
             </div>
-
+          </SectionBlock>
+          <SectionBlock title="SECTION F (Continued)" number="">
             {/* 18. Kitchen */}
             <div style={{ marginTop: "16px" }}>
               <h3
@@ -8813,7 +8822,21 @@ const ReportView: React.FC<ReportViewProps> = ({
                 </div>
               </div>
             </div>
+          </SectionBlock>
+        </div>
 
+        {/* --- PAGE 6: Parts 22, 23, Location, Comments, Sign --- */}
+        <div
+          className="ahr-page"
+          style={{
+            background: "#fff",
+            padding: "30px 40px",
+            borderRadius: "24px",
+            boxShadow: "0 10px 40px rgba(0,0,0,0.04)",
+            minHeight: "1120px",
+          }}
+        >
+          <SectionBlock title="SECTION F (Continued)" number="">
             {/* 22. Parking */}
             <div style={{ marginTop: "32px" }}>
               <h3
@@ -9106,6 +9129,8 @@ const ReportView: React.FC<ReportViewProps> = ({
               </div>
             </div>
 
+          </SectionBlock>
+          <SectionBlock title="Property Location" number="">
             {/* Property Location Map */}
             {propertyCoords && (
               <div style={{ marginTop: "32px" }}>
@@ -9126,19 +9151,18 @@ const ReportView: React.FC<ReportViewProps> = ({
                     borderRadius: "12px",
                     overflow: "hidden",
                     border: "1px solid #e2e8f0",
-                    height: "300px",
+                    height: "200px",
                   }}
                 >
-                  <iframe
-                    title="Property Location Map"
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${propertyCoords.lon - 0.005},${propertyCoords.lat - 0.003},${propertyCoords.lon + 0.005},${propertyCoords.lat + 0.003}&layer=mapnik&marker=${propertyCoords.lat},${propertyCoords.lon}`}
+                  <img
+                    src={`/api/map-image?lat=${propertyCoords.lat}&lon=${propertyCoords.lon}`}
+                    alt="Property Location Map"
                     style={{
                       width: "100%",
-                      height: "300px",
-                      border: "none",
+                      height: "200px",
+                      objectFit: "cover",
                       display: "block",
                     }}
-                    sandbox="allow-scripts"
                   />
                 </div>
                 <div
@@ -9147,6 +9171,8 @@ const ReportView: React.FC<ReportViewProps> = ({
                     justifyContent: "space-between",
                     alignItems: "center",
                     marginTop: "8px",
+                    flexWrap: "wrap",
+                    gap: "8px",
                   }}
                 >
                   <span
@@ -9332,119 +9358,144 @@ const ReportView: React.FC<ReportViewProps> = ({
           </SectionBlock>
         </div>
 
-        {/* --- PAGE 4: VISUAL EVIDENCE --- */}
-        <div
-          className="ahr-page"
-          style={{
-            background: "#fff",
-            padding: "50px 70px",
-            borderRadius: "24px",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.04)",
-            minHeight: "1120px",
-          }}
-        >
-          <SectionBlock title="AHR Evidence Portfolio" number="G">
+        {/* --- PAGE 7+: VISUAL EVIDENCE (Chunked) --- */}
+        {(function () {
+          const evidence = caseData.evidence || [];
+          const chunkSize = 8;
+          const chunks = [];
+          for (let i = 0; i < evidence.length; i += chunkSize) {
+            chunks.push(evidence.slice(i, i + chunkSize));
+          }
+          // Always render at least one page if chunks is empty but floor plan exists
+          if (chunks.length === 0 && wizardData.floorPlan) chunks.push([]);
+
+          return chunks.map((chunk, pageIdx) => (
             <div
+              key={`evidence-page-${pageIdx}`}
+              className="ahr-page"
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "20px",
-                marginBottom: "40px",
+                background: "#fff",
+                padding: "50px 70px",
+                borderRadius: "24px",
+                boxShadow: "0 10px 40px rgba(0,0,0,0.04)",
+                minHeight: "1120px",
               }}
             >
-              {(caseData.evidence || []).map((img: string, idx: number) => (
+              <SectionBlock
+                title={
+                  pageIdx === 0
+                    ? "AHR Evidence Portfolio"
+                    : "Evidence Portfolio (Cont.)"
+                }
+                number="G"
+              >
                 <div
-                  key={idx}
                   style={{
-                    borderRadius: "16px",
-                    overflow: "hidden",
-                    border: `1px solid ${AHR_BORDER}`,
-                    position: "relative",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "20px",
+                    marginBottom: "40px",
                   }}
                 >
-                  <img
-                    src={img}
-                    alt="Evidence"
-                    style={{
-                      width: "100%",
-                      aspectRatio: "16/10",
-                      objectFit: "cover",
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: "0",
-                      left: "0",
-                      right: "0",
-                      padding: "12px",
-                      background:
-                        "linear-gradient(transparent, rgba(0,0,0,0.8))",
-                      color: "#fff",
-                      fontSize: "11px",
-                      fontWeight: "800",
-                    }}
-                  >
-                    {idx === 0
-                      ? "External Elevation"
-                      : `Internal Asset #${idx}`}
-                  </div>
+                  {chunk.map((img: string, idx: number) => {
+                    const globalIdx = pageIdx * chunkSize + idx;
+                    return (
+                      <div
+                        key={globalIdx}
+                        style={{
+                          borderRadius: "16px",
+                          overflow: "hidden",
+                          border: `1px solid ${AHR_BORDER}`,
+                          position: "relative",
+                        }}
+                      >
+                        <img
+                          src={img}
+                          alt="Evidence"
+                          style={{
+                            width: "100%",
+                            aspectRatio: "16/10",
+                            objectFit: "cover",
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: "0",
+                            left: "0",
+                            right: "0",
+                            padding: "12px",
+                            background:
+                              "linear-gradient(transparent, rgba(0,0,0,0.8))",
+                            color: "#fff",
+                            fontSize: "11px",
+                            fontWeight: "800",
+                          }}
+                        >
+                          {globalIdx === 0
+                            ? "External Elevation"
+                            : `Internal Asset #${globalIdx}`}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
 
-            {wizardData.floorPlan && (
-              <div style={{ marginTop: "40px" }}>
-                <h4
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: "900",
-                    color: AHR_DEEP,
-                    borderLeft: `6px solid ${AHR_DEEP}`,
-                    paddingLeft: "12px",
-                    marginBottom: "20px",
-                  }}
-                >
-                  VALIDATED FLOOR PLAN MAP
-                </h4>
-                <div
-                  style={{
-                    border: `1px solid ${AHR_BORDER}`,
-                    borderRadius: "24px",
-                    padding: "20px",
-                    background: "#f8fafc",
-                  }}
-                >
-                  <img
-                    src={
-                      typeof wizardData.floorPlan === "string"
-                        ? wizardData.floorPlan
-                        : URL.createObjectURL(wizardData.floorPlan)
-                    }
-                    style={{
-                      width: "100%",
-                      maxHeight: "600px",
-                      objectFit: "contain",
-                      borderRadius: "12px",
-                    }}
-                  />
-                  <div
-                    style={{
-                      marginTop: "16px",
-                      fontSize: "12px",
-                      textAlign: "center",
-                      color: "#64748b",
-                      fontWeight: "700",
-                    }}
-                  >
-                    Homingo AI Vision: Spatial Mapping Applied (M4 Compliance
-                    Verified)
+                {/* Floor Plan on the first evidence page */}
+                {pageIdx === 0 && wizardData.floorPlan && (
+                  <div style={{ marginTop: "40px" }}>
+                    <h4
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: "900",
+                        color: AHR_DEEP,
+                        borderLeft: `6px solid ${AHR_DEEP}`,
+                        paddingLeft: "12px",
+                        marginBottom: "20px",
+                      }}
+                    >
+                      VALIDATED FLOOR PLAN MAP
+                    </h4>
+                    <div
+                      style={{
+                        border: `1px solid ${AHR_BORDER}`,
+                        borderRadius: "24px",
+                        padding: "20px",
+                        background: "#f8fafc",
+                      }}
+                    >
+                      <img
+                        src={
+                          typeof wizardData.floorPlan === "string"
+                            ? wizardData.floorPlan
+                            : URL.createObjectURL(wizardData.floorPlan)
+                        }
+                        style={{
+                          width: "100%",
+                          maxHeight: "600px",
+                          objectFit: "contain",
+                          borderRadius: "12px",
+                        }}
+                      />
+                      <div
+                        style={{
+                          marginTop: "16px",
+                          fontSize: "12px",
+                          textAlign: "center",
+                          color: "#64748b",
+                          fontWeight: "700",
+                        }}
+                      >
+                        Homingo AI Vision: Spatial Mapping Applied (M4
+                        Compliance Verified)
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            )}
-          </SectionBlock>
-        </div>
+                )}
+              </SectionBlock>
+            </div>
+          ));
+        })()}
       </div>
 
       <style>{`

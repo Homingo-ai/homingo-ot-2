@@ -18,55 +18,14 @@ const FloorPlanStep: React.FC<WizardStepProps> = ({
     return URL.createObjectURL(formData.floorPlan);
   }, [formData.floorPlan]);
 
+  const isPlanApproved = floorPlanAnalysis && floorPlanAnalysis.is_floor_plan !== false;
   const overlayState = hasPlan
     ? isAnalyzing
       ? "purple"
-      : floorPlanAnalysis
+      : isPlanApproved
         ? "green"
         : "yellow"
     : null;
-
-  // Color mapping for annotation types
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "door":
-        return {
-          border: "#22c55e",
-          bg: "rgba(34, 197, 94, 0.2)",
-          text: "#15803d",
-        };
-      case "stairs":
-        return {
-          border: "#f59e0b",
-          bg: "rgba(245, 158, 11, 0.2)",
-          text: "#b45309",
-        };
-      case "ramp":
-        return {
-          border: "#3b82f6",
-          bg: "rgba(59, 130, 246, 0.2)",
-          text: "#1d4ed8",
-        };
-      case "lift":
-        return {
-          border: "#a855f7",
-          bg: "rgba(168, 85, 247, 0.2)",
-          text: "#7e22ce",
-        };
-      case "second_exit":
-        return {
-          border: "#ef4444",
-          bg: "rgba(239, 68, 68, 0.2)",
-          text: "#b91c1c",
-        };
-      default:
-        return {
-          border: "#64748b",
-          bg: "rgba(100, 116, 139, 0.2)",
-          text: "#334155",
-        };
-    }
-  };
 
   return (
     <motion.div
@@ -133,35 +92,14 @@ const FloorPlanStep: React.FC<WizardStepProps> = ({
                         </span>
                       </div>
                     )}
+                    {overlayState === "green" && (
+                      <div className="flex flex-col items-center gap-2 text-white">
+                        <CheckCircle size={32} />
+                        <span className="font-bold text-sm">Plan Approved</span>
+                      </div>
+                    )}
                   </div>
                 )}
-                {floorPlanAnalysis?.annotations?.map((ann, idx) => {
-                  const [ymin, xmin, ymax, xmax] = ann.bbox;
-                  const style = getTypeColor(ann.type);
-                  return (
-                    <div
-                      key={idx}
-                      className="absolute rounded pointer-events-none z-10"
-                      style={{
-                        top: `${(ymin / 1000) * 100}%`,
-                        left: `${(xmin / 1000) * 100}%`,
-                        height: `${((ymax - ymin) / 1000) * 100}%`,
-                        width: `${((xmax - xmin) / 1000) * 100}%`,
-                        border: `2px solid ${style.border}`,
-                        backgroundColor: style.bg,
-                      }}
-                    >
-                      {ann.label && (
-                        <span
-                          className="absolute -top-5 left-0 text-white text-[10px] font-bold py-0.5 px-1.5 rounded z-10 whitespace-nowrap"
-                          style={{ background: style.border }}
-                        >
-                          {ann.label}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
                 {!isAnalyzing && (
                   <div
                     className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold z-20"
@@ -175,37 +113,6 @@ const FloorPlanStep: React.FC<WizardStepProps> = ({
                   </div>
                 )}
               </div>
-
-              {floorPlanAnalysis && (
-                <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                  {floorPlanAnalysis.entrance_level && (
-                    <div className="flex items-center gap-1.5 py-1.5 px-3 bg-green-50 rounded-lg border border-green-200">
-                      <div className="w-2 h-2 rounded-full bg-green-600" />
-                      <span className="text-xs font-semibold text-green-800">
-                        {floorPlanAnalysis.entrance_level.value} Level
-                      </span>
-                    </div>
-                  )}
-                  {floorPlanAnalysis.lift?.detected && (
-                    <div className="flex items-center gap-1.5 py-1.5 px-3 bg-purple-50 rounded-lg border border-purple-200">
-                      <div className="w-2 h-2 rounded-full bg-purple-500" />
-                      <span className="text-xs font-semibold text-purple-900">
-                        Lift Detected
-                      </span>
-                    </div>
-                  )}
-                  {floorPlanAnalysis.annotations?.some(
-                    (a) => a.type === "stairs",
-                  ) && (
-                    <div className="flex items-center gap-1.5 py-1.5 px-3 bg-orange-50 rounded-lg border border-orange-200">
-                      <div className="w-2 h-2 rounded-full bg-amber-500" />
-                      <span className="text-xs font-semibold text-orange-800">
-                        Stairs Found
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
             </motion.div>
           ) : (
             <motion.div

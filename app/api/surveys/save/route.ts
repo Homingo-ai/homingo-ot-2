@@ -107,8 +107,8 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Floor plan as evidence
-      if (wizardData.floorPlan && typeof wizardData.floorPlan === 'string' && !wizardData.floorPlan.startsWith('data:')) {
+      // Floor plan as evidence (only when AI-approved)
+      if (wizardData.floorPlan && wizardData.floorPlanApproved !== false && typeof wizardData.floorPlan === 'string' && !wizardData.floorPlan.startsWith('data:')) {
         const fpMapping = CATEGORY_SECTION_MAP['floorPlan'];
         evidenceRecords.push({
           survey_id: surveyId,

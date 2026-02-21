@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { MapPin, Calendar, FileText, Shield, Clock } from "lucide-react";
+import { MapPin, Calendar, FileText, Shield, Clock, ChevronRight } from "lucide-react";
 import { Case } from "@/types/dashboard";
 import { cn } from "@/lib/utils/cn";
 
@@ -85,11 +85,6 @@ const CaseCard: React.FC<CaseCardProps> = ({ caseData, onClick }) => {
 
       {/* Card Content */}
       <div className="p-4">
-        {/* Case ID */}
-        <div className="text-[11px] font-bold text-primary mb-1.5 uppercase tracking-wider">
-          {caseData.id}
-        </div>
-
         {/* Address */}
         <h3 className="text-base font-bold text-slate-900 mb-1 leading-tight">
           {caseData.address || "Address Pending"}
@@ -113,6 +108,13 @@ const CaseCard: React.FC<CaseCardProps> = ({ caseData, onClick }) => {
                 ? new Date(caseData.assessmentDate).toLocaleDateString()
                 : "Date TBC"}
             </span>
+          </div>
+        </div>
+
+        {/* Navigation arrow */}
+        <div className="flex justify-end mt-3 pt-3 border-t border-slate-100">
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white">
+            <ChevronRight size={18} />
           </div>
         </div>
       </div>

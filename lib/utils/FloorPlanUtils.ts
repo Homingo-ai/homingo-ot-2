@@ -1,4 +1,6 @@
 export interface FloorPlanAnalysisResult {
+  /** AI validation: true if image is a floor plan, false if random photo/unrelated document */
+  is_floor_plan?: boolean;
   entrance_level: {
     value: "GROUND" | "UPPER" | "BASEMENT";
     confidence: number;
@@ -67,7 +69,7 @@ export const analyzeFloorPlan = async (
     });
 
     const prompt = `
-            Analyze the floor plan image deeply and provide a structured JSON response.
+            STEP 0 (VALIDATION): First confirm this image is a floor plan or architectural drawing of a property (room layout, walls, doors, dimensions). If it is a random photo, selfie, unrelated document, or not a floor plan, set is_floor_plan: false and return the minimal structure with is_floor_plan: false. If it IS a floor plan, set is_floor_plan: true and proceed with the full analysis below.
             
             **1. Deep Structural Analysis:**
             - **Entrance Level**: Identify the main entrance floor (GROUND/UPPER/BASEMENT).
@@ -93,6 +95,7 @@ export const analyzeFloorPlan = async (
 
             RETURN JSON ONLY:
             {
+              "is_floor_plan": boolean,
               "entrance_level": { "value": "GROUND" | "UPPER" | "BASEMENT", "confidence": 0.0-1.0 },
               "floor_level_number": number | null,
               "lift": { "detected": boolean, "confidence": 0.0-1.0 },
@@ -158,16 +161,23 @@ export const analyzeFloorPlan = async (
     let cleanJson = data.result;
 
     if (typeof cleanJson === "object") {
-      return cleanJson as FloorPlanAnalysisResult;
+      const result = cleanJson as FloorPlanAnalysisResult;
+      if (result.is_floor_plan === false) return null;
+      return result;
     }
 
-    if (cleanJson.includes("```json")) {
-      cleanJson = cleanJson.replace(/```json\n?/, "").replace(/```/, "");
-    } else if (cleanJson.includes("```")) {
-      cleanJson = cleanJson.replace(/```\n?/, "").replace(/```/, "");
+    if (typeof cleanJson === "string") {
+      if (cleanJson.includes("```json")) {
+        cleanJson = cleanJson.replace(/```json\n?/, "").replace(/```/, "");
+      } else if (cleanJson.includes("```")) {
+        cleanJson = cleanJson.replace(/```\n?/, "").replace(/```/, "");
+      }
+      const result = JSON.parse(cleanJson) as FloorPlanAnalysisResult;
+      if (result.is_floor_plan === false) return null;
+      return result;
     }
 
-    return JSON.parse(cleanJson) as FloorPlanAnalysisResult;
+    return null;
   } catch (error) {
     console.error("Error analyzing floor plan:", error);
     return null;

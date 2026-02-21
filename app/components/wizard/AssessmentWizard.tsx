@@ -90,6 +90,7 @@ const initialFormData = {
   photos: [],
   categoryPhotos: {},
   floorPlan: null,
+  floorPlanApproved: false,
   hasNoFloorPlan: false,
   bathroomLocation: "",
   // Scoring fields
@@ -167,6 +168,9 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
         const data = { ...initialData } as any;
         if (data.evidence && !data.photos) {
           data.photos = data.evidence;
+        }
+        if (data.floorPlan && data.floorPlanApproved === undefined) {
+          data.floorPlanApproved = true;
         }
         setFormData({ ...initialFormData, ...data });
         setStep(1);
@@ -281,6 +285,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
           const result = await analyzeFloorPlan(file);
           if (result) {
             setFloorPlanAnalysis(result);
+            handleUpdateField("floorPlanApproved", result.is_floor_plan !== false);
             if (result.bedroom_count)
               handleUpdateField("bedrooms", result.bedroom_count.value);
             if (result.entrance_level)
@@ -318,9 +323,14 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
               handleUpdateField("facilitiesAboveLevel", result.facilities_per_floor.above ?? []);
               handleUpdateField("facilitiesBelowLevel", result.facilities_per_floor.below ?? []);
             }
+          } else {
+            setFloorPlanAnalysis(null);
+            handleUpdateField("floorPlanApproved", false);
           }
         } catch (err) {
           console.error("Floor plan analysis error:", err);
+          setFloorPlanAnalysis(null);
+          handleUpdateField("floorPlanApproved", false);
         }
         e.target.value = "";
         return;

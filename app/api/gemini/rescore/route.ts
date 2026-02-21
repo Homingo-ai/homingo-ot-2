@@ -61,6 +61,8 @@ Q11: No wash/dry toilet=0.00, Have wash/dry toilet=0.17
 Apply adaptive weighting (wheelchair=1.3x for Q5,Q7,Q8,Q9,Q10; two-handed=1.2x for Q2,Q3,Q4).
 Apply penalty rules for high-risk combinations.
 
+CRITICAL: The AccessibilityScore MUST NEVER exceed 100. Always clamp the final percentage to [0, 100]. If any calculation yields >100, use exactly 100.0.
+
 RESPOND IN EXACT JSON:
 {"AccessibilityScore": "XX.X%", "Grade": "X", "Summary": {"Strengths": "...", "Weaknesses": "...", "Recommendation": "..."}}`;
 
@@ -131,8 +133,19 @@ RESPOND IN EXACT JSON:
         }
     }
 
+    const clampScore = (scoreStr: string | undefined): string => {
+        if (!scoreStr || typeof scoreStr !== 'string') return scoreStr ?? '0%';
+        const num = parseFloat(scoreStr.replace(/%/g, ''));
+        if (isNaN(num)) return scoreStr;
+        const clamped = Math.max(0, Math.min(100, num));
+        return `${clamped.toFixed(1)}%`;
+    };
+
     try {
         const parsedResult = JSON.parse(jsonString);
+        if (parsedResult.AccessibilityScore) {
+            parsedResult.AccessibilityScore = clampScore(parsedResult.AccessibilityScore);
+        }
         return NextResponse.json({ success: true, result: parsedResult });
     } catch (e) {
         console.error("[Rescore API] JSON Parse Error:", e);
@@ -144,10 +157,11 @@ RESPOND IN EXACT JSON:
              const gradeMatch = aiText.match(/"Grade":\s*"([^"]+)"/);
              
              if (scoreMatch || gradeMatch) {
+                 const rawScore = scoreMatch ? scoreMatch[1] : "N/A";
                  return NextResponse.json({ 
                     success: true, 
                     result: {
-                        AccessibilityScore: scoreMatch ? scoreMatch[1] : "N/A",
+                        AccessibilityScore: rawScore !== "N/A" ? clampScore(rawScore) : "N/A",
                         Grade: gradeMatch ? gradeMatch[1] : "N/A",
                         Summary: { Strengths: "See full text", Weaknesses: "See full text", Recommendation: aiText }
                     }

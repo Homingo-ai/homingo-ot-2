@@ -61,14 +61,14 @@ const AnalysisStep: React.FC<WizardStepProps> = ({
                                 <ClipboardCheck size={18} color="var(--primary)" />
                                 <div>
                                     <span style={statLabelStyle}>Compliance</span>
-                                    <span style={statValueStyle}>92%</span>
+                                    <span style={statValueStyle}>{formData.aiReport?.AccessibilityScore || 'Pending…'}</span>
                                 </div>
                             </div>
                             <div style={statCardStyle}>
                                 <FileText size={18} color="#22c55e" />
                                 <div>
-                                    <span style={statLabelStyle}>Findings</span>
-                                    <span style={statValueStyle}>12 Logged</span>
+                                    <span style={statLabelStyle}>Grade</span>
+                                    <span style={statValueStyle}>{formData.aiReport?.Grade || '—'}</span>
                                 </div>
                             </div>
                         </div>

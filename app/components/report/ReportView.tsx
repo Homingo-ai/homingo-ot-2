@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Download, Printer, ChevronLeft, Calendar, FileText, CheckCircle2, Shield, ShieldAlert, Wrench, Check, MapPin, Award, AlertCircle, Box, List } from 'lucide-react';
 import { formatBritishDateTime } from '@/lib/utils/dateFormatter';
 import { Case } from '@/types/dashboard';
 import { ConfidenceBadge } from '../wizard/ConfidenceBadge';
-import { generateAHRPDF, downloadPDF } from '@/lib/utils/pdfGenerator';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 interface ReportViewProps {
     caseData: Case;
@@ -143,7 +144,7 @@ const ComplianceSummary = ({ grade, risks, confidence, summary }: { grade: strin
                     Grade {grade}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <ConfidenceBadge confidence={confidence as 'HIGH' | 'MEDIUM' | 'LOW'} />
+                    <ConfidenceBadge confidence={confidence === 'HIGH' ? 0.95 : confidence === 'MEDIUM' ? 0.75 : 0.5} />
                 </div>
             </div>
         </div>
@@ -237,7 +238,7 @@ const SegmentedField = ({ label, value, segments, flex = 1, labelWidth, isModifi
                 background: '#fff',
                 overflow: 'hidden'
             }}>
-                {chars.map((char, i) => (
+                {chars.map((char: string, i: number) => (
                     <div key={i} style={{
                         flex: 1,
                         display: 'flex',
@@ -396,7 +397,7 @@ const AHR_MeasurementBox = ({ segments = 4, value = '', label = '', unit = 'cm',
         >
             {label && <span style={{ fontSize: '11px', fontWeight: '500', color: '#1e40af', width: label === 'Lift ID' ? '30px' : '28px', lineHeight: '1.1' }}>{label === 'Lift ID' ? <span style={{ display: 'block' }}>Lift<br />ID</span> : label}</span>}
             <div style={{ display: 'flex', border: `1.5px solid ${isModified && !isLocked ? AHR_MODIFIED : '#1e40af'}`, borderRadius: '6px', height: '26px', background: '#fff' }}>
-                {chars.map((char, i) => (
+                {chars.map((char: string, i: number) => (
                     <React.Fragment key={i}>
                         <div style={{
                             width: segments > 5 ? '16px' : '20px',
@@ -446,10 +447,18 @@ const FacilitiesCheck = ({ label, checked, isModified = false, onChange, isLocke
 const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase }) => {
     if (!caseData) return null;
 
+    const reportRef = useRef<HTMLDivElement>(null);
+    const [isDownloading, setIsDownloading] = useState(false);
+
     // Use a single state object to track all user overrides
     const [overrides, setOverrides] = useState<Record<string, any>>(caseData.mlData?.userOverrides || {});
+    // Track which keys were changed by the user (not auto-populated by API)
+    const [userModifiedKeys, setUserModifiedKeys] = useState<Set<string>>(new Set(Object.keys(caseData.mlData?.userOverrides || {})));
     const [isSaving, setIsSaving] = useState(false);
     const [isLocked, setIsLocked] = useState<boolean>(caseData.mlData?.isLocked || false);
+
+    // Property location coordinates for map
+    const [propertyCoords, setPropertyCoords] = useState<{ lat: number; lon: number } | null>(null);
 
     // Modal states
     const [modalConfig, setModalConfig] = useState<{ isOpen: boolean; title: string; value: string; key: string } | null>(null);
@@ -458,8 +467,57 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
     const rawAhr = caseData.mlData?.rawAhr || {};
     const wizardData = caseData.mlData?.wizardData || {};
 
+    // Auto-fetch proximity data for Section 23 on mount if postcode is available and not already overridden
+    useEffect(() => {
+        const postcode = wizardData.postcode || caseData.postcode;
+        const alreadySet = overrides.proximityShops !== undefined || overrides.proximityTransport !== undefined;
+        const hasRawAhrData = rawAhr.context_amenities?.proximity?.shops_lt_100m !== undefined;
+        if (!postcode || alreadySet || hasRawAhrData) return;
+
+        fetch('/api/proximity', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ postcode, street: wizardData.street || '' }),
+        })
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+                if (!data) return;
+                setOverrides(prev => ({
+                    ...prev,
+                    proximityShops: data.proximityShops,
+                    proximityTransport: data.proximityTransport,
+                    ...(data.transportTypes?.length ? { proximityTransportTypes: data.transportTypes } : {}),
+                }));
+                if (data.lat && data.lon) setPropertyCoords({ lat: data.lat, lon: data.lon });
+            })
+            .catch(() => { /* silently ignore proximity fetch errors */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Fetch coordinates for map when we have postcode but no coords yet (e.g. when raw AHR data exists and proximity API was skipped)
+    useEffect(() => {
+        const postcode = wizardData.postcode || caseData.postcode;
+        const alreadySet = overrides.proximityShops !== undefined || overrides.proximityTransport !== undefined;
+        const hasRawAhrData = rawAhr.context_amenities?.proximity?.shops_lt_100m !== undefined;
+        const skippedProximityFetch = alreadySet || hasRawAhrData;
+        if (!postcode || propertyCoords || !skippedProximityFetch) return;
+
+        fetch('/api/proximity', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ postcode, street: wizardData.street || '' }),
+        })
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+                if (data?.lat && data?.lon) setPropertyCoords({ lat: data.lat, lon: data.lon });
+            })
+            .catch(() => { /* silently ignore */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const handleOverride = (key: string, value: any) => {
         if (isLocked) return;
+        setUserModifiedKeys(prev => new Set(prev).add(key));
         setOverrides(prev => ({
             ...prev,
             [key]: value
@@ -496,13 +554,100 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
         }
     };
 
+    const generatePDFBlob = async (): Promise<jsPDF | null> => {
+        if (!reportRef.current) return null;
+        const pages = reportRef.current.querySelectorAll<HTMLElement>('.ahr-page');
+        if (pages.length === 0) return null;
+
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pdfWidth = 210;
+        const pdfHeight = 297;
+
+        // Fixed pixel width for A4 at 96dpi
+        const captureWidthPx = 794;
+        const a4Ratio = pdfHeight / pdfWidth;
+
+        for (let i = 0; i < pages.length; i++) {
+            const page = pages[i];
+
+            // Save original styles
+            const orig = {
+                width: page.style.width, minHeight: page.style.minHeight,
+                height: page.style.height, maxWidth: page.style.maxWidth,
+                borderRadius: page.style.borderRadius, boxShadow: page.style.boxShadow,
+                padding: page.style.padding,
+            };
+
+            // Force A4-proportioned rendering
+            page.style.width = `${captureWidthPx}px`;
+            page.style.maxWidth = `${captureWidthPx}px`;
+            page.style.minHeight = `${Math.round(captureWidthPx * a4Ratio)}px`;
+            page.style.height = 'auto';
+            page.style.borderRadius = '0';
+            page.style.boxShadow = 'none';
+            page.style.padding = '30px 36px';
+
+            await new Promise(r => setTimeout(r, 50));
+
+            const canvas = await html2canvas(page, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                width: captureWidthPx,
+            });
+
+            // Restore original styles
+            Object.assign(page.style, orig);
+
+            const imgData = canvas.toDataURL('image/jpeg', 0.92);
+            const totalImgHeight = (canvas.height / canvas.width) * pdfWidth;
+            const pageCount = Math.ceil(totalImgHeight / pdfHeight);
+
+            for (let p = 0; p < pageCount; p++) {
+                if (i > 0 || p > 0) pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, -(p * pdfHeight), pdfWidth, totalImgHeight);
+            }
+        }
+        return pdf;
+    };
+
     const handleDownloadPDF = async () => {
+        setIsDownloading(true);
         try {
-            const pdfBlob = await generateAHRPDF(rawAhr, wizardData, overrides);
-            downloadPDF(pdfBlob, wizardData.fullName || 'Surveyor', rawAhr.meta_data?.uprn || caseData.id);
+            const pdf = await generatePDFBlob();
+            if (!pdf) return;
+            const name = (wizardData.fullName || 'Surveyor').replace(/[^a-zA-Z0-9]/g, '_');
+            const id = rawAhr.meta_data?.uprn || caseData.id || 'report';
+            pdf.save(`${name}_${id}.pdf`);
         } catch (error) {
             console.error('[ReportView] PDF Download Error:', error);
             alert('Failed to generate PDF. Please try again.');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    const handlePrintPDF = async () => {
+        setIsDownloading(true);
+        try {
+            const pdf = await generatePDFBlob();
+            if (!pdf) return;
+            const blob = pdf.output('blob');
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url);
+            if (printWindow) {
+                printWindow.onload = () => {
+                    printWindow.print();
+                    URL.revokeObjectURL(url);
+                };
+            }
+        } catch (error) {
+            console.error('[ReportView] PDF Print Error:', error);
+            alert('Failed to generate PDF for printing.');
+        } finally {
+            setIsDownloading(false);
         }
     };
 
@@ -511,10 +656,12 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
         return overrides[key] !== undefined ? overrides[key] : original;
     };
 
-    const isMod = (key: string) => (overrides[key] !== undefined) && !isLocked;
+    const isYes = (key: string, original: any) => getVal(key, original) === true;
+
+    const isMod = (key: string) => userModifiedKeys.has(key) && !isLocked;
 
     return (
-        <div className="report-container" style={{ background: '#f8fafc', minHeight: '100vh', padding: '0 12px 16px' }}>
+        <div ref={reportRef} className="report-container" style={{ background: '#f8fafc', minHeight: '100vh', padding: '0 12px 16px' }}>
             {/* Nav Toolbar */}
             <div className="no-print" style={{ maxWidth: '1000px', margin: '16px auto 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #e2e8f0', background: '#fff', padding: '10px 20px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', color: '#64748b' }}>
@@ -544,6 +691,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                     </button>
                     <button
                         onClick={handleDownloadPDF}
+                        disabled={isDownloading}
                         style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -554,14 +702,15 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                             padding: '12px 24px',
                             borderRadius: '12px',
                             fontWeight: '700',
-                            cursor: 'pointer',
-                            boxShadow: '0 4px 15px rgba(124, 58, 237, 0.2)'
+                            cursor: isDownloading ? 'not-allowed' : 'pointer',
+                            boxShadow: '0 4px 15px rgba(124, 58, 237, 0.2)',
+                            opacity: isDownloading ? 0.7 : 1
                         }}
                     >
-                        <Download size={18} /> Download AHR PDF
+                        <Download size={18} /> {isDownloading ? 'Generating…' : 'Download AHR PDF'}
                     </button>
-                    <button onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: '8px', border: 'none', background: '#fff', padding: '12px 24px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-                        <Printer size={18} /> Print Report
+                    <button onClick={handlePrintPDF} disabled={isDownloading} style={{ display: 'flex', alignItems: 'center', gap: '8px', border: 'none', background: '#fff', padding: '12px 24px', borderRadius: '12px', fontWeight: '700', cursor: isDownloading ? 'not-allowed' : 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', opacity: isDownloading ? 0.7 : 1 }}>
+                        <Printer size={18} /> {isDownloading ? 'Generating…' : 'Print Report'}
                     </button>
                 </div>
             </div>
@@ -600,12 +749,12 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                     />
 
                     {/* COMPLIANCE SUMMARY (Enterprise Feature) */}
-                    {caseData.mlData?.riskAssessment && (
+                    {(caseData.mlData as any)?.riskAssessment && (
                         <ComplianceSummary
-                            grade={caseData.mlData.riskAssessment.overallGrade.replace('GRADE_', '')}
-                            risks={caseData.mlData.riskAssessment.riskFactors}
-                            confidence={caseData.mlData.aiReport?.Confidence || 'MEDIUM'}
-                            summary={caseData.mlData.riskAssessment.summary}
+                            grade={(caseData.mlData as any).riskAssessment.overallGrade.replace('GRADE_', '')}
+                            risks={(caseData.mlData as any).riskAssessment.riskFactors}
+                            confidence={(caseData.mlData as any).aiReport?.Confidence || 'MEDIUM'}
+                            summary={(caseData.mlData as any).riskAssessment.summary}
                         />
                     )}
 
@@ -637,7 +786,47 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                         </div>
                     </SectionBlock>
 
-
+                    <SectionBlock title="SECTION B" number="">
+                        <div style={{ fontSize: '12px', color: '#1e40af', fontWeight: '600', marginBottom: '12px' }}>Multiple Identical Properties</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div style={{ display: 'flex', gap: '24px', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: '500', color: '#1e40af', minWidth: '280px' }}>
+                                    Is this one of a number of identical properties in the same block/development?
+                                </span>
+                                <SmallCheckbox
+                                    label="Yes"
+                                    checked={getVal('multipleProperties', wizardData.multipleProperties === 'Yes' ? 'Yes' : wizardData.multipleProperties === 'No' ? 'No' : '') === 'Yes'}
+                                    isModified={isMod('multipleProperties')}
+                                    isLocked={isLocked}
+                                    onClick={() => handleOverride('multipleProperties', 'Yes')}
+                                />
+                                <SmallCheckbox
+                                    label="No"
+                                    checked={getVal('multipleProperties', wizardData.multipleProperties === 'No' ? 'No' : wizardData.multipleProperties === 'Yes' ? 'Yes' : '') === 'No'}
+                                    isModified={isMod('multipleProperties')}
+                                    isLocked={isLocked}
+                                    onClick={() => handleOverride('multipleProperties', 'No')}
+                                />
+                            </div>
+                            {getVal('multipleProperties', wizardData.multipleProperties) === 'Yes' && (
+                                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', paddingBottom: '8px' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: '500', color: '#1e40af', minWidth: '280px' }}>
+                                        Number of identical properties in the block/development:
+                                    </span>
+                                    <SegmentedField
+                                        label=""
+                                        value={getVal('multiplePropertiesCount', wizardData.multiplePropertiesCount || '')}
+                                        segments={5}
+                                        flex="0 0 100px"
+                                        labelWidth="0px"
+                                        isModified={isMod('multiplePropertiesCount')}
+                                        isLocked={isLocked}
+                                        onChange={() => openModal('No. of identical properties', 'multiplePropertiesCount', getVal('multiplePropertiesCount', wizardData.multiplePropertiesCount || ''))}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </SectionBlock>
 
                     <SectionBlock title="SECTION C" number="">
                         <div style={{ fontSize: '12px', color: '#1e40af', fontWeight: '600', marginBottom: '12px' }}>Tick all the relevant information in this section</div>
@@ -706,7 +895,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         <span style={{ fontSize: '11px', fontWeight: '800', color: '#1e40af' }}>Please State Floor Level</span>
                                         <div
-                                            onClick={() => openModal('Floor Level', 'floorLevel', getVal('floorLevel', wizardData.floorLevel))}
+                                            onClick={() => openModal('Floor Level', 'floorLevel', getVal('floorLevel', wizardData.floorLevelNumber ?? wizardData.floorLevel))}
                                             style={{
                                                 border: `1.5px solid ${isMod('floorLevel') ? AHR_MODIFIED : '#1e40af'}`,
                                                 borderRadius: '6px',
@@ -722,7 +911,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                                 cursor: isLocked ? 'default' : 'pointer'
                                             }}
                                         >
-                                            {getVal('floorLevel', wizardData.floorLevel) || '--'}
+                                            {getVal('floorLevel', wizardData.floorLevelNumber ?? wizardData.floorLevel) || '--'}
                                         </div>
                                     </div>
                                 </div>
@@ -735,7 +924,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                         <div key={n}>
                                             <SmallCheckbox
                                                 label={n.toString()}
-                                                checked={getVal('liftsCount', wizardData.communalLifts) === n.toString()}
+                                                checked={getVal('liftsCount', wizardData.communalLiftCount ?? wizardData.communalLifts) === n.toString()}
                                                 isModified={isMod('liftsCount')}
                                                 isLocked={isLocked}
                                                 onClick={() => handleOverride('liftsCount', n.toString())}
@@ -750,7 +939,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                         <div key={n.toString()}>
                                             <SmallCheckbox
                                                 label={n.toString()}
-                                                checked={getVal('bedroomsCount', wizardData.bedrooms) === n.toString()}
+                                                checked={getVal('bedroomsCount', String(wizardData.bedrooms ?? '')) === n.toString()}
                                                 isModified={isMod('bedroomsCount')}
                                                 isLocked={isLocked}
                                                 onClick={() => handleOverride('bedroomsCount', n.toString())}
@@ -766,7 +955,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                         <div key={n}>
                                             <SmallCheckbox
                                                 label={n.toString()}
-                                                checked={getVal('bedSpacesCount', wizardData.bedSpaces) === n.toString()}
+                                                checked={getVal('bedSpacesCount', String(wizardData.bedSpaces ?? '')) === n.toString()}
                                                 isModified={isMod('bedSpacesCount')}
                                                 isLocked={isLocked}
                                                 onClick={() => handleOverride('bedSpacesCount', n.toString())}
@@ -781,12 +970,12 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                             <h3 style={{ fontSize: '14px', fontWeight: '900', color: '#1e40af', borderBottom: '1px solid #bfdbfe', paddingBottom: '4px', marginBottom: '16px' }}>2. Major Adaptions</h3>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px 20px' }}>
-                                <YesNoCheckboxes label="Through floor lift" value={getVal('throughFloorLift', rawAhr.eligibility_checks?.special_equipment?.through_floor_lift)} isModified={isMod('throughFloorLift')} onChange={(v) => handleOverride('throughFloorLift', v)} />
-                                <YesNoCheckboxes label="Step-lift" value={getVal('stepLift', rawAhr.eligibility_checks?.special_equipment?.step_lift)} isModified={isMod('stepLift')} onChange={(v) => handleOverride('stepLift', v)} />
-                                <YesNoCheckboxes label="Platform (stair) lift" value={getVal('platformLift', rawAhr.eligibility_checks?.special_equipment?.platform_lift)} isModified={isMod('platformLift')} onChange={(v) => handleOverride('platformLift', v)} />
-                                <YesNoCheckboxes label="Level access shower" value={getVal('levelAccessShower', rawAhr.eligibility_checks?.level_access_shower_present)} isModified={isMod('levelAccessShower')} onChange={(v) => handleOverride('levelAccessShower', v)} />
-                                <YesNoCheckboxes label="Ceiling track hoist" value={getVal('ceilingTrackHoist', rawAhr.eligibility_checks?.special_equipment?.ceiling_track_hoist)} isModified={isMod('ceilingTrackHoist')} onChange={(v) => handleOverride('ceilingTrackHoist', v)} />
-                                <YesNoCheckboxes label="Stair-lift" value={getVal('stairLift', rawAhr.eligibility_checks?.special_equipment?.stair_lift)} isModified={isMod('stairLift')} onChange={(v) => handleOverride('stairLift', v)} />
+                                <YesNoCheckboxes label="Through floor lift" value={getVal('throughFloorLift', rawAhr.eligibility_checks?.special_equipment?.through_floor_lift ?? (wizardData.internalLift === 'Through-Floor Lift' ? true : false))} isModified={isMod('throughFloorLift')} onChange={(v) => handleOverride('throughFloorLift', v)} />
+                                <YesNoCheckboxes label="Step-lift" value={getVal('stepLift', rawAhr.eligibility_checks?.special_equipment?.step_lift ?? false)} isModified={isMod('stepLift')} onChange={(v) => handleOverride('stepLift', v)} />
+                                <YesNoCheckboxes label="Platform (stair) lift" value={getVal('platformLift', rawAhr.eligibility_checks?.special_equipment?.platform_lift ?? false)} isModified={isMod('platformLift')} onChange={(v) => handleOverride('platformLift', v)} />
+                                <YesNoCheckboxes label="Level access shower" value={getVal('levelAccessShower', rawAhr.eligibility_checks?.level_access_shower_present ?? (wizardData.bathingType?.includes('Level Access') ? true : false))} isModified={isMod('levelAccessShower')} onChange={(v) => handleOverride('levelAccessShower', v)} />
+                                <YesNoCheckboxes label="Ceiling track hoist" value={getVal('ceilingTrackHoist', rawAhr.eligibility_checks?.special_equipment?.ceiling_track_hoist ?? false)} isModified={isMod('ceilingTrackHoist')} onChange={(v) => handleOverride('ceilingTrackHoist', v)} />
+                                <YesNoCheckboxes label="Stair-lift" value={getVal('stairLift', rawAhr.eligibility_checks?.special_equipment?.stair_lift ?? (wizardData.internalLift === 'Stairlift' ? true : false))} isModified={isMod('stairLift')} onChange={(v) => handleOverride('stairLift', v)} />
 
                                 <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '16px', marginTop: '4px' }}>
                                     <span style={{ fontSize: '10px', fontWeight: '800', color: '#1e40af', lineHeight: '1.2', minWidth: '100px' }}>Internal dimensions<br />of through floor lift</span>
@@ -858,19 +1047,20 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                 <div style={{ flexDirection: 'column', width: '180px', display: 'flex' }}>
                                     <ChoiceBox
                                         label="YES (Complete 3)"
-                                        checked={getVal('communalDoorPresent', rawAhr.external_access?.communal_front_door?.present !== false)}
+                                        checked={getVal('communalDoorPresent', rawAhr.external_access?.communal_front_door?.present ?? (wizardData.communalDoorPresent === 'Y'))}
                                         isModified={isMod('communalDoorPresent')}
                                         isLocked={isLocked}
                                         onClick={() => handleOverride('communalDoorPresent', true)}
                                     />
                                     <ChoiceBox
                                         label="NO (Go to 4)"
-                                        checked={getVal('communalDoorPresent', rawAhr.external_access?.communal_front_door?.present !== false) === false}
+                                        checked={getVal('communalDoorPresent', rawAhr.external_access?.communal_front_door?.present ?? (wizardData.communalDoorPresent === 'Y')) === false}
                                         isModified={isMod('communalDoorPresent')}
                                         isLocked={isLocked}
                                         onClick={() => handleOverride('communalDoorPresent', false)}
                                     />
                                 </div>
+                                {isYes('communalDoorPresent', rawAhr.external_access?.communal_front_door?.present ?? (wizardData.communalDoorPresent === 'Y')) && (
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px dashed #bfdbfe', paddingBottom: '8px' }}>
                                         <span style={{ fontSize: '11px', fontWeight: '800', color: isMod('communalDoorSteps') ? AHR_MODIFIED : '#1e40af', flex: 1, lineHeight: '1.2' }}>No. of steps (inc. thresholds of 10cm or more)<br />from public path to the communal front door:</span>
@@ -879,7 +1069,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                                 <SmallCheckbox
                                                     key={n.toString()}
                                                     label={n.toString()}
-                                                    checked={String(getVal('communalDoorSteps', rawAhr.external_access?.communal_front_door?.steps_count || '0')) === n.toString()}
+                                                    checked={String(getVal('communalDoorSteps', rawAhr.external_access?.communal_front_door?.steps_count ?? wizardData.communalStepCount ?? '0')) === n.toString()}
                                                     isModified={isMod('communalDoorSteps')}
                                                     isLocked={isLocked}
                                                     onClick={() => handleOverride('communalDoorSteps', n.toString())}
@@ -916,6 +1106,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                         />
                                     </div>
                                 </div>
+                                )}
                             </div>
                         </div>
 
@@ -932,14 +1123,14 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                         <ChoiceBox
                                             label="YES (Complete 4)"
-                                            checked={getVal('communalRampPresent', rawAhr.external_access?.ramps?.communal?.present) === true}
+                                            checked={getVal('communalRampPresent', rawAhr.external_access?.ramps?.communal?.present ?? false) === true}
                                             isModified={isMod('communalRampPresent')}
                                             isLocked={isLocked}
                                             onClick={() => handleOverride('communalRampPresent', true)}
                                         />
                                         <ChoiceBox
                                             label="NO (Go to 5)"
-                                            checked={getVal('communalRampPresent', rawAhr.external_access?.ramps?.communal?.present) === false}
+                                            checked={getVal('communalRampPresent', rawAhr.external_access?.ramps?.communal?.present ?? false) === false}
                                             isModified={isMod('communalRampPresent')}
                                             isLocked={isLocked}
                                             onClick={() => handleOverride('communalRampPresent', false)}
@@ -960,6 +1151,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                     </div>
                                 </div>
 
+                                {isYes('communalRampPresent', rawAhr.external_access?.ramps?.communal?.present ?? false) && (
                                 <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1.2fr 1.2fr', gap: '1px', background: '#bfdbfe', border: '1px solid #bfdbfe' }}>
                                     {/* Column 1: Straight Ramp */}
                                     <div style={{ background: '#fff', padding: '16px 12px', position: 'relative', display: 'flex', flexDirection: 'column' }}>
@@ -1129,6 +1321,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                         </div>
                                     </div>
                                 </div>
+                                )}
                             </div>
                         </div>
 
@@ -1139,19 +1332,20 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                 <div style={{ display: 'flex', flexDirection: 'column', width: '180px' }}>
                                     <ChoiceBox
                                         label="YES (Complete 5)"
-                                        checked={getVal('communalLiftPresent', rawAhr.external_access?.lift_details?.present) === true}
+                                        checked={getVal('communalLiftPresent', rawAhr.external_access?.lift_details?.present ?? false) === true}
                                         isModified={isMod('communalLiftPresent')}
                                         isLocked={isLocked}
                                         onClick={() => handleOverride('communalLiftPresent', true)}
                                     />
                                     <ChoiceBox
                                         label="NO (Go to 6)"
-                                        checked={getVal('communalLiftPresent', rawAhr.external_access?.lift_details?.present) === false}
+                                        checked={getVal('communalLiftPresent', rawAhr.external_access?.lift_details?.present ?? false) === false}
                                         isModified={isMod('communalLiftPresent')}
                                         isLocked={isLocked}
                                         onClick={() => handleOverride('communalLiftPresent', false)}
                                     />
                                 </div>
+                                {isYes('communalLiftPresent', rawAhr.external_access?.lift_details?.present ?? false) && (
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     <div style={{ display: 'flex', gap: '30px', alignItems: 'center' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1209,7 +1403,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                                     <SmallCheckbox
                                                         key={n}
                                                         label={n.toString()}
-                                                        checked={String(getVal('communalLiftServicingCount', rawAhr.eligibility_checks?.lifts_servicing_dwelling_count || '0')) === n.toString()}
+                                                        checked={String(getVal('communalLiftServicingCount', rawAhr.eligibility_checks?.lifts_servicing_dwelling_count ?? wizardData.communalLiftCount ?? '0')) === n.toString()}
                                                         isModified={isMod('communalLiftServicingCount')}
                                                         isLocked={isLocked}
                                                         onClick={() => handleOverride('communalLiftServicingCount', n.toString())}
@@ -1219,6 +1413,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                         </div>
                                     </div>
                                 </div>
+                                )}
                             </div>
                         </div>
 
@@ -1229,19 +1424,20 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                 <div style={{ display: 'flex', flexDirection: 'column', width: '180px' }}>
                                     <ChoiceBox
                                         label="YES (Complete 6)"
-                                        checked={getVal('propertyDoorPresent', rawAhr.external_access?.property_front_door?.present !== false)}
+                                        checked={getVal('propertyDoorPresent', rawAhr.external_access?.property_front_door?.present ?? true)}
                                         isModified={isMod('propertyDoorPresent')}
                                         isLocked={isLocked}
                                         onClick={() => handleOverride('propertyDoorPresent', true)}
                                     />
                                     <ChoiceBox
                                         label="NO (Go to 7)"
-                                        checked={getVal('propertyDoorPresent', rawAhr.external_access?.property_front_door?.present !== false) === false}
+                                        checked={getVal('propertyDoorPresent', rawAhr.external_access?.property_front_door?.present ?? true) === false}
                                         isModified={isMod('propertyDoorPresent')}
                                         isLocked={isLocked}
                                         onClick={() => handleOverride('propertyDoorPresent', false)}
                                     />
                                 </div>
+                                {isYes('propertyDoorPresent', rawAhr.external_access?.property_front_door?.present ?? true) && (
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px dashed #bfdbfe', paddingBottom: '8px' }}>
                                         <span style={{ fontSize: '11px', fontWeight: '800', color: isMod('propertyDoorSteps') ? AHR_MODIFIED : '#1e40af', flex: 1, lineHeight: '1.2' }}>No. of steps (inc. thresholds of 10cm or more)<br />from public path to the property front door:</span>
@@ -1287,6 +1483,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                         />
                                     </div>
                                 </div>
+                                )}
                             </div>
                         </div>
 
@@ -1303,14 +1500,14 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                         <ChoiceBox
                                             label="YES (Complete 7)"
-                                            checked={getVal('propertyRampPresent', rawAhr.external_access?.ramps?.property?.present) === true}
+                                            checked={getVal('propertyRampPresent', rawAhr.external_access?.ramps?.property?.present ?? false) === true}
                                             isModified={isMod('propertyRampPresent')}
                                             isLocked={isLocked}
                                             onClick={() => handleOverride('propertyRampPresent', true)}
                                         />
                                         <ChoiceBox
                                             label="NO (Go to next section)"
-                                            checked={getVal('propertyRampPresent', rawAhr.external_access?.ramps?.property?.present) === false}
+                                            checked={getVal('propertyRampPresent', rawAhr.external_access?.ramps?.property?.present ?? false) === false}
                                             isModified={isMod('propertyRampPresent')}
                                             isLocked={isLocked}
                                             onClick={() => handleOverride('propertyRampPresent', false)}
@@ -1331,6 +1528,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                     </div>
                                 </div>
 
+                                {isYes('propertyRampPresent', rawAhr.external_access?.ramps?.property?.present ?? false) && (
                                 <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1.2fr 1.2fr', gap: '1px', background: '#bfdbfe', border: '1px solid #bfdbfe' }}>
                                     {/* Column 1: Straight Ramp */}
                                     <div style={{ background: '#fff', padding: '16px 12px', position: 'relative', display: 'flex', flexDirection: 'column' }}>
@@ -1433,6 +1631,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                         </div>
                                     </div>
                                 </div>
+                                )}
                             </div>
                         </div>
 
@@ -1479,7 +1678,8 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                             { title: '9. Facilities Above Access Level', dataKey: 'above_access_level_has', key: 'facilitiesAboveLevel' },
                             { title: '10. Facilities Below Access Level', dataKey: 'below_access_level_has', key: 'facilitiesBelowLevel' }
                         ].map((section, idx) => {
-                            const facilities = getVal(section.key, rawAhr.facility_distribution?.[section.dataKey] || []);
+                            const wizardFacilities = section.key === 'facilitiesAccessLevel' ? wizardData.facilitiesAccessLevel : section.key === 'facilitiesAboveLevel' ? wizardData.facilitiesAboveLevel : wizardData.facilitiesBelowLevel;
+                            const facilities = getVal(section.key, rawAhr.facility_distribution?.[section.dataKey] ?? wizardFacilities ?? []);
                             const has = (item: string) => facilities.some((f: string) => f.toLowerCase().replace(/_/g, ' ').includes(item.toLowerCase()));
                             const toggle = (item: string) => {
                                 const current = Array.isArray(facilities) ? [...facilities] : [];
@@ -1501,7 +1701,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                                 checked={has(label)}
                                                 isModified={isMod(section.key)}
                                                 isLocked={isLocked}
-                                                onClick={() => toggle(label)}
+                                                onChange={() => toggle(label)}
                                             />
                                         ))}
                                     </div>
@@ -1577,34 +1777,34 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                             <span style={{ fontSize: '11px', fontWeight: '500', color: isMod('stairsPresent') ? AHR_MODIFIED : '#1e40af' }}>Stairs:</span>
                                             <div style={{ display: 'flex', gap: '8px' }}>
-                                                <SmallCheckbox label="Y" checked={getVal('stairsPresent', rawAhr.vertical_circulation?.internal_stairs?.present) === true} isModified={isMod('stairsPresent')} isLocked={isLocked} onClick={() => handleOverride('stairsPresent', true)} />
-                                                <SmallCheckbox label="N" checked={getVal('stairsPresent', rawAhr.vertical_circulation?.internal_stairs?.present) === false} isModified={isMod('stairsPresent')} isLocked={isLocked} onClick={() => handleOverride('stairsPresent', false)} />
+                                                <SmallCheckbox label="Y" checked={getVal('stairsPresent', rawAhr.vertical_circulation?.internal_stairs?.present ?? (wizardData.internalStairs === 'Yes')) === true} isModified={isMod('stairsPresent')} isLocked={isLocked} onClick={() => handleOverride('stairsPresent', true)} />
+                                                <SmallCheckbox label="N" checked={getVal('stairsPresent', rawAhr.vertical_circulation?.internal_stairs?.present ?? (wizardData.internalStairs === 'Yes')) === false} isModified={isMod('stairsPresent')} isLocked={isLocked} onClick={() => handleOverride('stairsPresent', false)} />
                                             </div>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                             <span style={{ fontSize: '11px', fontWeight: '500', color: isMod('stairsWidth') ? AHR_MODIFIED : '#1e40af', whiteSpace: 'nowrap' }}>Width of Stairs:</span>
                                             <AHR_MeasurementBox
                                                 segments={4}
-                                                value={getVal('stairsWidth', rawAhr.vertical_circulation?.internal_stairs?.min_width_cm?.value)}
+                                                value={getVal('stairsWidth', rawAhr.vertical_circulation?.internal_stairs?.min_width_cm?.value ?? wizardData.stairWidth)}
                                                 unit="cm"
                                                 isModified={isMod('stairsWidth')}
                                                 isLocked={isLocked}
-                                                onChange={() => openModal('Stairs Width', 'stairsWidth', getVal('stairsWidth', rawAhr.vertical_circulation?.internal_stairs?.min_width_cm?.value))}
+                                                onChange={() => openModal('Stairs Width', 'stairsWidth', getVal('stairsWidth', rawAhr.vertical_circulation?.internal_stairs?.min_width_cm?.value ?? wizardData.stairWidth))}
                                             />
                                         </div>
                                         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <span style={{ fontSize: '10.5px', fontWeight: '500', color: isMod('stairsType') ? AHR_MODIFIED : '#1e40af', textAlign: 'right', lineHeight: '1.1', whiteSpace: 'nowrap' }}>Straight Stairs:</span>
                                                 <div style={{ display: 'flex', gap: '6px' }}>
-                                                    <SmallCheckbox label="Y" checked={getVal('stairsType', rawAhr.vertical_circulation?.internal_stairs?.type) === 'STRAIGHT'} isModified={isMod('stairsType')} isLocked={isLocked} onClick={() => handleOverride('stairsType', 'STRAIGHT')} />
-                                                    <SmallCheckbox label="N" checked={getVal('stairsType', rawAhr.vertical_circulation?.internal_stairs?.type) !== 'STRAIGHT'} isModified={isMod('stairsType')} isLocked={isLocked} onClick={() => handleOverride('stairsType', 'OTHER')} />
+                                                    <SmallCheckbox label="Y" checked={getVal('stairsType', rawAhr.vertical_circulation?.internal_stairs?.type ?? (wizardData.internalStairsType === 'Straight' ? 'STRAIGHT' : wizardData.internalStairsType ? 'OTHER' : undefined)) === 'STRAIGHT'} isModified={isMod('stairsType')} isLocked={isLocked} onClick={() => handleOverride('stairsType', 'STRAIGHT')} />
+                                                    <SmallCheckbox label="N" checked={getVal('stairsType', rawAhr.vertical_circulation?.internal_stairs?.type ?? (wizardData.internalStairsType === 'Straight' ? 'STRAIGHT' : wizardData.internalStairsType ? 'OTHER' : undefined)) !== 'STRAIGHT'} isModified={isMod('stairsType')} isLocked={isLocked} onClick={() => handleOverride('stairsType', 'OTHER')} />
                                                 </div>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <span style={{ fontSize: '10.5px', fontWeight: '500', color: isMod('stairsType') ? AHR_MODIFIED : '#1e40af', textAlign: 'right', lineHeight: '1.1', whiteSpace: 'nowrap' }}>Curved Stairs:</span>
                                                 <div style={{ display: 'flex', gap: '6px' }}>
-                                                    <SmallCheckbox label="Y" checked={getVal('stairsType', rawAhr.vertical_circulation?.internal_stairs?.type) === 'CURVED'} isModified={isMod('stairsType')} isLocked={isLocked} onClick={() => handleOverride('stairsType', 'CURVED')} />
-                                                    <SmallCheckbox label="N" checked={getVal('stairsType', rawAhr.vertical_circulation?.internal_stairs?.type) !== 'CURVED'} isModified={isMod('stairsType')} isLocked={isLocked} onClick={() => handleOverride('stairsType', 'OTHER')} />
+                                                    <SmallCheckbox label="Y" checked={getVal('stairsType', rawAhr.vertical_circulation?.internal_stairs?.type ?? (['Quarter Turn','Half Turn','Spiral','Winding'].includes(wizardData.internalStairsType) ? 'CURVED' : wizardData.internalStairsType ? 'OTHER' : undefined)) === 'CURVED'} isModified={isMod('stairsType')} isLocked={isLocked} onClick={() => handleOverride('stairsType', 'CURVED')} />
+                                                    <SmallCheckbox label="N" checked={getVal('stairsType', rawAhr.vertical_circulation?.internal_stairs?.type ?? (['Quarter Turn','Half Turn','Spiral','Winding'].includes(wizardData.internalStairsType) ? 'CURVED' : wizardData.internalStairsType ? 'OTHER' : undefined)) !== 'CURVED'} isModified={isMod('stairsType')} isLocked={isLocked} onClick={() => handleOverride('stairsType', 'OTHER')} />
                                                 </div>
                                             </div>
                                         </div>
@@ -1612,8 +1812,8 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: `1px dashed ${isMod('stairsClearSpaceBottom') ? AHR_MODIFIED : '#bfdbfe'}`, paddingTop: '10px' }}>
                                         <span style={{ fontSize: '11px', fontWeight: '500', color: isMod('stairsClearSpaceBottom') ? AHR_MODIFIED : '#1e40af' }}>Is there at least 70cm between bottom of stair and leading edge of front door?</span>
                                         <div style={{ display: 'flex', gap: '10px' }}>
-                                            <SmallCheckbox label="Y" checked={getVal('stairsClearSpaceBottom', rawAhr.vertical_circulation?.internal_stairs?.clear_space_bottom_70cm) === true} isModified={isMod('stairsClearSpaceBottom')} isLocked={isLocked} onClick={() => handleOverride('stairsClearSpaceBottom', true)} />
-                                            <SmallCheckbox label="N" checked={getVal('stairsClearSpaceBottom', rawAhr.vertical_circulation?.internal_stairs?.clear_space_bottom_70cm) === false} isModified={isMod('stairsClearSpaceBottom')} isLocked={isLocked} onClick={() => handleOverride('stairsClearSpaceBottom', false)} />
+                                            <SmallCheckbox label="Y" checked={getVal('stairsClearSpaceBottom', rawAhr.vertical_circulation?.internal_stairs?.clear_space_bottom_70cm ?? (wizardData.stairBottomClearance === 'Y')) === true} isModified={isMod('stairsClearSpaceBottom')} isLocked={isLocked} onClick={() => handleOverride('stairsClearSpaceBottom', true)} />
+                                            <SmallCheckbox label="N" checked={getVal('stairsClearSpaceBottom', rawAhr.vertical_circulation?.internal_stairs?.clear_space_bottom_70cm ?? (wizardData.stairBottomClearance === 'Y')) === false} isModified={isMod('stairsClearSpaceBottom')} isLocked={isLocked} onClick={() => handleOverride('stairsClearSpaceBottom', false)} />
                                         </div>
                                     </div>
                                 </div>
@@ -1628,15 +1828,15 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <span style={{ fontSize: '11px', fontWeight: '500', color: isMod('secondExitPresent') ? AHR_MODIFIED : '#1e40af' }}>2nd Exit:</span>
                                         <div style={{ display: 'flex', gap: '6px' }}>
-                                            <SmallCheckbox label="Y" checked={getVal('secondExitPresent', rawAhr.context_amenities?.second_exit?.present) === true} isModified={isMod('secondExitPresent')} isLocked={isLocked} onClick={() => handleOverride('secondExitPresent', true)} />
-                                            <SmallCheckbox label="N" checked={getVal('secondExitPresent', rawAhr.context_amenities?.second_exit?.present) === false} isModified={isMod('secondExitPresent')} isLocked={isLocked} onClick={() => handleOverride('secondExitPresent', false)} />
+                                            <SmallCheckbox label="Y" checked={getVal('secondExitPresent', rawAhr.context_amenities?.second_exit?.present ?? (wizardData.secondExit === 'Yes')) === true} isModified={isMod('secondExitPresent')} isLocked={isLocked} onClick={() => handleOverride('secondExitPresent', true)} />
+                                            <SmallCheckbox label="N" checked={getVal('secondExitPresent', rawAhr.context_amenities?.second_exit?.present ?? (wizardData.secondExit === 'Yes')) === false} isModified={isMod('secondExitPresent')} isLocked={isLocked} onClick={() => handleOverride('secondExitPresent', false)} />
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         <span style={{ fontSize: '11px', fontWeight: '500', color: isMod('secondExitAccessToStreet') ? AHR_MODIFIED : '#1e40af', textAlign: 'left', lineHeight: '1.2' }}>Access from<br />2nd Exit to Street</span>
                                         <div style={{ display: 'flex', gap: '6px' }}>
-                                            <SmallCheckbox label="Y" checked={getVal('secondExitAccessToStreet', rawAhr.context_amenities?.second_exit?.access_to_street) === true} isModified={isMod('secondExitAccessToStreet')} isLocked={isLocked} onClick={() => handleOverride('secondExitAccessToStreet', true)} />
-                                            <SmallCheckbox label="N" checked={getVal('secondExitAccessToStreet', rawAhr.context_amenities?.second_exit?.access_to_street) === false} isModified={isMod('secondExitAccessToStreet')} isLocked={isLocked} onClick={() => handleOverride('secondExitAccessToStreet', false)} />
+                                            <SmallCheckbox label="Y" checked={getVal('secondExitAccessToStreet', rawAhr.context_amenities?.second_exit?.access_to_street ?? (wizardData.secondExitLocation === 'Public Way')) === true} isModified={isMod('secondExitAccessToStreet')} isLocked={isLocked} onClick={() => handleOverride('secondExitAccessToStreet', true)} />
+                                            <SmallCheckbox label="N" checked={getVal('secondExitAccessToStreet', rawAhr.context_amenities?.second_exit?.access_to_street ?? (wizardData.secondExitLocation === 'Public Way')) === false} isModified={isMod('secondExitAccessToStreet')} isLocked={isLocked} onClick={() => handleOverride('secondExitAccessToStreet', false)} />
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1702,14 +1902,14 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                         <ChoiceBox
                                             label="YES (Complete 14)"
-                                            checked={getVal('secondExitRampPresent', rawAhr.context_amenities?.second_exit?.ramped) === true}
+                                            checked={getVal('secondExitRampPresent', rawAhr.context_amenities?.second_exit?.ramped ?? false) === true}
                                             isModified={isMod('secondExitRampPresent')}
                                             isLocked={isLocked}
                                             onClick={() => handleOverride('secondExitRampPresent', true)}
                                         />
                                         <ChoiceBox
                                             label="NO (Continue)"
-                                            checked={getVal('secondExitRampPresent', rawAhr.context_amenities?.second_exit?.ramped) === false}
+                                            checked={getVal('secondExitRampPresent', rawAhr.context_amenities?.second_exit?.ramped ?? false) === false}
                                             isModified={isMod('secondExitRampPresent')}
                                             isLocked={isLocked}
                                             onClick={() => handleOverride('secondExitRampPresent', false)}
@@ -1730,6 +1930,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                     </div>
                                 </div>
 
+                                {isYes('secondExitRampPresent', rawAhr.context_amenities?.second_exit?.ramped ?? false) && (
                                 <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1.2fr 1.2fr', gap: '1px', background: '#bfdbfe', border: '1px solid #bfdbfe' }}>
                                     {/* Column 1: Straight Ramp */}
                                     <div style={{ background: '#fff', padding: '16px 12px', position: 'relative', display: 'flex', flexDirection: 'column' }}>
@@ -1879,6 +2080,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                         </div>
                                     </div>
                                 </div>
+                                )}
                             </div>
                         </div>
 
@@ -1889,15 +2091,15 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                     <span style={{ fontSize: '11px', fontWeight: '500', color: isMod('gardenPresent') ? AHR_MODIFIED : '#1e40af' }}>Private Garden:</span>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <SmallCheckbox label="Y" checked={getVal('gardenPresent', rawAhr.context_amenities?.garden?.present) === true} isModified={isMod('gardenPresent')} isLocked={isLocked} onClick={() => handleOverride('gardenPresent', true)} />
-                                        <SmallCheckbox label="N" checked={getVal('gardenPresent', rawAhr.context_amenities?.garden?.present) === false} isModified={isMod('gardenPresent')} isLocked={isLocked} onClick={() => handleOverride('gardenPresent', false)} />
+                                        <SmallCheckbox label="Y" checked={getVal('gardenPresent', rawAhr.context_amenities?.garden?.present ?? (wizardData.gardenAccess === 'Yes')) === true} isModified={isMod('gardenPresent')} isLocked={isLocked} onClick={() => handleOverride('gardenPresent', true)} />
+                                        <SmallCheckbox label="N" checked={getVal('gardenPresent', rawAhr.context_amenities?.garden?.present ?? (wizardData.gardenAccess === 'Yes')) === false} isModified={isMod('gardenPresent')} isLocked={isLocked} onClick={() => handleOverride('gardenPresent', false)} />
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                     <span style={{ fontSize: '11px', fontWeight: '500', color: isMod('balconyPresent') ? AHR_MODIFIED : '#1e40af' }}>Balcony:</span>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <SmallCheckbox label="Y" checked={getVal('balconyPresent', rawAhr.context_amenities?.balcony?.present) === true} isModified={isMod('balconyPresent')} isLocked={isLocked} onClick={() => handleOverride('balconyPresent', true)} />
-                                        <SmallCheckbox label="N" checked={getVal('balconyPresent', rawAhr.context_amenities?.balcony?.present) === false} isModified={isMod('balconyPresent')} isLocked={isLocked} onClick={() => handleOverride('balconyPresent', false)} />
+                                        <SmallCheckbox label="Y" checked={getVal('balconyPresent', rawAhr.context_amenities?.balcony?.present ?? (wizardData.balconyPresent === 'Yes')) === true} isModified={isMod('balconyPresent')} isLocked={isLocked} onClick={() => handleOverride('balconyPresent', true)} />
+                                        <SmallCheckbox label="N" checked={getVal('balconyPresent', rawAhr.context_amenities?.balcony?.present ?? (wizardData.balconyPresent === 'Yes')) === false} isModified={isMod('balconyPresent')} isLocked={isLocked} onClick={() => handleOverride('balconyPresent', false)} />
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1905,7 +2107,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                     <div
                                         onClick={() => {
                                             if (isLocked) return;
-                                            openModal('No. of Steps to Garden', String(getVal('gardenSteps', rawAhr.context_amenities?.garden?.steps || '')), (v) => handleOverride('gardenSteps', v));
+                                            openModal('No. of Steps to Garden', 'gardenSteps', getVal('gardenSteps', rawAhr.context_amenities?.garden?.steps || ''));
                                         }}
                                         style={{ border: `1.5px solid ${isMod('gardenSteps') ? AHR_MODIFIED : '#1e40af'}`, borderRadius: '6px', width: '40px', height: '28px', background: isMod('gardenSteps') ? '#f0fdf4' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800', cursor: isLocked ? 'default' : 'pointer', color: isMod('gardenSteps') ? AHR_MODIFIED : '#1e293b' }}
                                     >
@@ -1917,7 +2119,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                     <div
                                         onClick={() => {
                                             if (isLocked) return;
-                                            openModal('No. of Steps to Balcony', String(getVal('balconySteps', rawAhr.context_amenities?.balcony?.steps || '')), (v) => handleOverride('balconySteps', v));
+                                            openModal('No. of Steps to Balcony', 'balconySteps', getVal('balconySteps', rawAhr.context_amenities?.balcony?.steps || ''));
                                         }}
                                         style={{ border: `1.5px solid ${isMod('balconySteps') ? AHR_MODIFIED : '#1e40af'}`, borderRadius: '6px', width: '40px', height: '28px', background: isMod('balconySteps') ? '#f0fdf4' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800', cursor: isLocked ? 'default' : 'pointer', color: isMod('balconySteps') ? AHR_MODIFIED : '#1e293b' }}
                                     >
@@ -1992,11 +2194,11 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                                 <span style={{ fontSize: '10px', fontWeight: '500', color: isMod('hallwayMinWidthHeadOn') ? AHR_MODIFIED : '#1e40af' }}>a Head on approach</span>
                                                 <AHR_MeasurementBox
                                                     segments={5}
-                                                    value={getVal('hallwayMinWidthHeadOn', rawAhr.internal_circulation?.hallway?.approach_type === 'HEAD_ON' ? rawAhr.internal_circulation?.hallway?.min_width_cm?.value : '')}
+                                                    value={getVal('hallwayMinWidthHeadOn', rawAhr.internal_circulation?.hallway?.approach_type === 'HEAD_ON' ? rawAhr.internal_circulation?.hallway?.min_width_cm?.value : (wizardData.hallwayWidthHeadOn || ''))}
                                                     unit="cm"
                                                     isModified={isMod('hallwayMinWidthHeadOn')}
                                                     isLocked={isLocked}
-                                                    onChange={() => openModal('Hallway Width (Head on)', 'hallwayMinWidthHeadOn', getVal('hallwayMinWidthHeadOn', rawAhr.internal_circulation?.hallway?.approach_type === 'HEAD_ON' ? rawAhr.internal_circulation?.hallway?.min_width_cm?.value : ''))}
+                                                    onChange={() => openModal('Hallway Width (Head on)', 'hallwayMinWidthHeadOn', getVal('hallwayMinWidthHeadOn', rawAhr.internal_circulation?.hallway?.approach_type === 'HEAD_ON' ? rawAhr.internal_circulation?.hallway?.min_width_cm?.value : (wizardData.hallwayWidthHeadOn || '')))}
                                                 />
                                             </div>
                                             <svg width="85" height="55" viewBox="0 0 100 80">
@@ -2025,11 +2227,11 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                                 <span style={{ fontSize: '10px', fontWeight: '500', color: isMod('hallwayMinWidthTurn') ? AHR_MODIFIED : '#1e40af' }}>b Turn approach</span>
                                                 <AHR_MeasurementBox
                                                     segments={5}
-                                                    value={getVal('hallwayMinWidthTurn', rawAhr.internal_circulation?.hallway?.approach_type === 'TURN_APPROACH' ? rawAhr.internal_circulation?.hallway?.min_width_cm?.value : '')}
+                                                    value={getVal('hallwayMinWidthTurn', rawAhr.internal_circulation?.hallway?.approach_type === 'TURN_APPROACH' ? rawAhr.internal_circulation?.hallway?.min_width_cm?.value : (wizardData.hallwayWidthTurn || ''))}
                                                     unit="cm"
                                                     isModified={isMod('hallwayMinWidthTurn')}
                                                     isLocked={isLocked}
-                                                    onChange={() => openModal('Hallway Width (Turn)', 'hallwayMinWidthTurn', getVal('hallwayMinWidthTurn', rawAhr.internal_circulation?.hallway?.approach_type === 'TURN_APPROACH' ? rawAhr.internal_circulation?.hallway?.min_width_cm?.value : ''))}
+                                                    onChange={() => openModal('Hallway Width (Turn)', 'hallwayMinWidthTurn', getVal('hallwayMinWidthTurn', rawAhr.internal_circulation?.hallway?.approach_type === 'TURN_APPROACH' ? rawAhr.internal_circulation?.hallway?.min_width_cm?.value : (wizardData.hallwayWidthTurn || '')))}
                                                 />
                                             </div>
                                             <svg width="85" height="55" viewBox="0 0 100 80">
@@ -2062,26 +2264,27 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '150px' }}>
                                     <ChoiceBox
                                         label="YES - Complete 17"
-                                        checked={getVal('wheelchairStoragePresent', rawAhr.internal_circulation?.wheelchair_storage?.present) === true}
+                                        checked={getVal('wheelchairStoragePresent', rawAhr.internal_circulation?.wheelchair_storage?.present ?? (wizardData.wheelchairStoragePresent === 'Y')) === true}
                                         isModified={isMod('wheelchairStoragePresent')}
                                         isLocked={isLocked}
                                         onClick={() => handleOverride('wheelchairStoragePresent', true)}
                                     />
                                     <ChoiceBox
                                         label="NO - Go to 18"
-                                        checked={getVal('wheelchairStoragePresent', rawAhr.internal_circulation?.wheelchair_storage?.present) === false}
+                                        checked={getVal('wheelchairStoragePresent', rawAhr.internal_circulation?.wheelchair_storage?.present ?? (wizardData.wheelchairStoragePresent === 'Y')) === false}
                                         isModified={isMod('wheelchairStoragePresent')}
                                         isLocked={isLocked}
                                         onClick={() => handleOverride('wheelchairStoragePresent', false)}
                                     />
                                 </div>
+                                {isYes('wheelchairStoragePresent', rawAhr.internal_circulation?.wheelchair_storage?.present ?? (wizardData.wheelchairStoragePresent === 'Y')) && (
                                 <div style={{ flex: 1 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '12px', borderBottom: `1px dashed ${isMod('wheelchairStorageLength') || isMod('wheelchairStorageWidth') ? (isLocked ? '#bfdbfe' : AHR_MODIFIED) : '#bfdbfe'}`, paddingBottom: '8px' }}>
                                         <span style={{ fontSize: '11px', color: (isMod('wheelchairStorageLength') || isMod('wheelchairStorageWidth')) ? AHR_MODIFIED : '#1e40af', fontWeight: '600' }}>Dimensions:</span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <AHR_MeasurementBox segments={4} value={getVal('wheelchairStorageLength', rawAhr.internal_circulation?.wheelchair_storage?.dimensions_cm?.length)} unit={null} isModified={isMod('wheelchairStorageLength')} isLocked={isLocked} onChange={() => openModal('Storage Length', 'wheelchairStorageLength', getVal('wheelchairStorageLength', rawAhr.internal_circulation?.wheelchair_storage?.dimensions_cm?.length))} />
+                                            <AHR_MeasurementBox segments={4} value={getVal('wheelchairStorageLength', rawAhr.internal_circulation?.wheelchair_storage?.dimensions_cm?.length ?? wizardData.wheelchairStorageLengthCm)} unit={null} isModified={isMod('wheelchairStorageLength')} isLocked={isLocked} onChange={() => openModal('Storage Length', 'wheelchairStorageLength', getVal('wheelchairStorageLength', rawAhr.internal_circulation?.wheelchair_storage?.dimensions_cm?.length ?? wizardData.wheelchairStorageLengthCm))} />
                                             <span style={{ color: (isMod('wheelchairStorageLength') || isMod('wheelchairStorageWidth')) ? AHR_MODIFIED : '#1e40af', fontSize: '12px' }}>x</span>
-                                            <AHR_MeasurementBox segments={4} value={getVal('wheelchairStorageWidth', rawAhr.internal_circulation?.wheelchair_storage?.dimensions_cm?.width)} unit={null} isModified={isMod('wheelchairStorageWidth')} isLocked={isLocked} onChange={() => openModal('Storage Width', 'wheelchairStorageWidth', getVal('wheelchairStorageWidth', rawAhr.internal_circulation?.wheelchair_storage?.dimensions_cm?.width))} />
+                                            <AHR_MeasurementBox segments={4} value={getVal('wheelchairStorageWidth', rawAhr.internal_circulation?.wheelchair_storage?.dimensions_cm?.width ?? wizardData.wheelchairStorageWidthCm)} unit={null} isModified={isMod('wheelchairStorageWidth')} isLocked={isLocked} onChange={() => openModal('Storage Width', 'wheelchairStorageWidth', getVal('wheelchairStorageWidth', rawAhr.internal_circulation?.wheelchair_storage?.dimensions_cm?.width ?? wizardData.wheelchairStorageWidthCm))} />
                                             <span style={{ color: (isMod('wheelchairStorageLength') || isMod('wheelchairStorageWidth')) ? AHR_MODIFIED : '#1e40af', fontSize: '11px', fontWeight: '500' }}>cm</span>
                                         </div>
                                     </div>
@@ -2096,6 +2299,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                         </div>
                                     </div>
                                 </div>
+                                )}
                             </div>
                         </div>
 
@@ -2107,32 +2311,32 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: '#f8fafc', borderRadius: '8px', border: `1px solid ${isMod('kitchenTurningSpaceFits150') ? AHR_MODIFIED : '#f1f5f9'}` }}>
                                     <span style={{ fontSize: '11px', fontWeight: '700', color: isMod('kitchenTurningSpaceFits150') ? AHR_MODIFIED : '#1e40af', lineHeight: '1.2' }}>Turning space for a<br />wheelchair (150x150)</span>
                                     <div style={{ display: 'flex', gap: '10px', flexShrink: 0, marginLeft: '12px' }}>
-                                        <SmallCheckbox label="Y" checked={getVal('kitchenTurningSpaceFits150', rawAhr.room_analysis?.kitchen?.turning_circle?.fits_150cm) === true} isModified={isMod('kitchenTurningSpaceFits150')} isLocked={isLocked} onClick={() => handleOverride('kitchenTurningSpaceFits150', true)} />
-                                        <SmallCheckbox label="N" checked={getVal('kitchenTurningSpaceFits150', rawAhr.room_analysis?.kitchen?.turning_circle?.fits_150cm) === false} isModified={isMod('kitchenTurningSpaceFits150')} isLocked={isLocked} onClick={() => handleOverride('kitchenTurningSpaceFits150', false)} />
+                                        <SmallCheckbox label="Y" checked={getVal('kitchenTurningSpaceFits150', rawAhr.room_analysis?.kitchen?.turning_circle?.fits_150cm ?? (wizardData.kitchenTurningCircle === 'Yes')) === true} isModified={isMod('kitchenTurningSpaceFits150')} isLocked={isLocked} onClick={() => handleOverride('kitchenTurningSpaceFits150', true)} />
+                                        <SmallCheckbox label="N" checked={getVal('kitchenTurningSpaceFits150', rawAhr.room_analysis?.kitchen?.turning_circle?.fits_150cm ?? (wizardData.kitchenTurningCircle === 'Yes')) === false} isModified={isMod('kitchenTurningSpaceFits150')} isLocked={isLocked} onClick={() => handleOverride('kitchenTurningSpaceFits150', false)} />
                                     </div>
                                 </div>
                                 {/* Row 1, Col 2 */}
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: '#f8fafc', borderRadius: '8px', border: `1px solid ${isMod('kitchenAccessibleUnits') ? AHR_MODIFIED : '#f1f5f9'}` }}>
                                     <span style={{ fontSize: '11px', fontWeight: '700', color: isMod('kitchenAccessibleUnits') ? AHR_MODIFIED : '#1e40af', lineHeight: '1.2' }}>Wheelchair accessible<br />kitchen units</span>
                                     <div style={{ display: 'flex', gap: '10px', flexShrink: 0, marginLeft: '12px' }}>
-                                        <SmallCheckbox label="Y" checked={getVal('kitchenAccessibleUnits', rawAhr.room_analysis?.kitchen?.accessible_units) === true} isModified={isMod('kitchenAccessibleUnits')} isLocked={isLocked} onClick={() => handleOverride('kitchenAccessibleUnits', true)} />
-                                        <SmallCheckbox label="N" checked={getVal('kitchenAccessibleUnits', rawAhr.room_analysis?.kitchen?.accessible_units) === false} isModified={isMod('kitchenAccessibleUnits')} isLocked={isLocked} onClick={() => handleOverride('kitchenAccessibleUnits', false)} />
+                                        <SmallCheckbox label="Y" checked={getVal('kitchenAccessibleUnits', rawAhr.room_analysis?.kitchen?.accessible_units ?? (wizardData.kitchenAccessibleUnits === 'Y')) === true} isModified={isMod('kitchenAccessibleUnits')} isLocked={isLocked} onClick={() => handleOverride('kitchenAccessibleUnits', true)} />
+                                        <SmallCheckbox label="N" checked={getVal('kitchenAccessibleUnits', rawAhr.room_analysis?.kitchen?.accessible_units ?? (wizardData.kitchenAccessibleUnits === 'Y')) === false} isModified={isMod('kitchenAccessibleUnits')} isLocked={isLocked} onClick={() => handleOverride('kitchenAccessibleUnits', false)} />
                                     </div>
                                 </div>
                                 {/* Row 2, Col 1 */}
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: '#f8fafc', borderRadius: '8px', border: `1px solid ${isMod('kitchenTurningSpaceFits170') ? AHR_MODIFIED : '#f1f5f9'}` }}>
                                     <span style={{ fontSize: '11px', fontWeight: '700', color: isMod('kitchenTurningSpaceFits170') ? AHR_MODIFIED : '#1e40af', lineHeight: '1.2' }}>Larger turning space for<br />wheelchair (170x140)</span>
                                     <div style={{ display: 'flex', gap: '10px', flexShrink: 0, marginLeft: '12px' }}>
-                                        <SmallCheckbox label="Y" checked={getVal('kitchenTurningSpaceFits170', false) === true} isModified={isMod('kitchenTurningSpaceFits170')} isLocked={isLocked} onClick={() => handleOverride('kitchenTurningSpaceFits170', true)} />
-                                        <SmallCheckbox label="N" checked={getVal('kitchenTurningSpaceFits170', false) === false} isModified={isMod('kitchenTurningSpaceFits170')} isLocked={isLocked} onClick={() => handleOverride('kitchenTurningSpaceFits170', false)} />
+                                        <SmallCheckbox label="Y" checked={getVal('kitchenTurningSpaceFits170', rawAhr.room_analysis?.kitchen?.turning_circle?.fits_170x140 ?? (wizardData.kitchenTurning170 === 'Y')) === true} isModified={isMod('kitchenTurningSpaceFits170')} isLocked={isLocked} onClick={() => handleOverride('kitchenTurningSpaceFits170', true)} />
+                                        <SmallCheckbox label="N" checked={getVal('kitchenTurningSpaceFits170', rawAhr.room_analysis?.kitchen?.turning_circle?.fits_170x140 ?? (wizardData.kitchenTurning170 === 'Y')) === false} isModified={isMod('kitchenTurningSpaceFits170')} isLocked={isLocked} onClick={() => handleOverride('kitchenTurningSpaceFits170', false)} />
                                     </div>
                                 </div>
                                 {/* Row 2, Col 2 */}
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: '#f8fafc', borderRadius: '8px', border: `1px solid ${isMod('kitchenSeparateToLiving') ? AHR_MODIFIED : '#f1f5f9'}` }}>
                                     <span style={{ fontSize: '11px', fontWeight: '700', color: isMod('kitchenSeparateToLiving') ? AHR_MODIFIED : '#1e40af' }}>Kitchen separate to living area</span>
                                     <div style={{ display: 'flex', gap: '10px', flexShrink: 0, marginLeft: '12px' }}>
-                                        <SmallCheckbox label="Y" checked={getVal('kitchenSeparateToLiving', false) === true} isModified={isMod('kitchenSeparateToLiving')} isLocked={isLocked} onClick={() => handleOverride('kitchenSeparateToLiving', true)} />
-                                        <SmallCheckbox label="N" checked={getVal('kitchenSeparateToLiving', false) === false} isModified={isMod('kitchenSeparateToLiving')} isLocked={isLocked} onClick={() => handleOverride('kitchenSeparateToLiving', false)} />
+                                        <SmallCheckbox label="Y" checked={getVal('kitchenSeparateToLiving', rawAhr.room_analysis?.kitchen?.separate_from_living ?? (wizardData.kitchenSeparateLiving === 'Y')) === true} isModified={isMod('kitchenSeparateToLiving')} isLocked={isLocked} onClick={() => handleOverride('kitchenSeparateToLiving', true)} />
+                                        <SmallCheckbox label="N" checked={getVal('kitchenSeparateToLiving', rawAhr.room_analysis?.kitchen?.separate_from_living ?? (wizardData.kitchenSeparateLiving === 'Y')) === false} isModified={isMod('kitchenSeparateToLiving')} isLocked={isLocked} onClick={() => handleOverride('kitchenSeparateToLiving', false)} />
                                     </div>
                                 </div>
                             </div>
@@ -2143,8 +2347,8 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                             <h3 style={{ fontSize: '13px', fontWeight: '900', color: isMod('toiletPresent') ? AHR_MODIFIED : '#1e40af', borderBottom: `1.5px solid ${isMod('toiletPresent') ? AHR_MODIFIED : '#bfdbfe'}`, paddingBottom: '2px', marginBottom: '12px' }}>19. Separate Toilet (not outside)</h3>
                             <div style={{ display: 'flex', gap: '24px' }}>
                                 <div style={{ border: `1.5px solid ${isMod('toiletPresent') ? AHR_MODIFIED : '#1e40af'}`, borderRadius: '4px', padding: '8px', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '140px' }}>
-                                    <SmallCheckbox label="YES (Complete 19)" checked={getVal('toiletPresent', rawAhr.facility_distribution?.access_level_has?.some((f: string) => f.includes('separate_wc')))} isModified={isMod('toiletPresent')} isLocked={isLocked} onClick={() => handleOverride('toiletPresent', true)} />
-                                    <SmallCheckbox label="NO (Go to 20)" checked={getVal('toiletPresent', rawAhr.facility_distribution?.access_level_has?.some((f: string) => f.includes('separate_wc'))) === false} isModified={isMod('toiletPresent')} isLocked={isLocked} onClick={() => handleOverride('toiletPresent', false)} />
+                                    <SmallCheckbox label="YES (Complete 19)" checked={getVal('toiletPresent', rawAhr.facility_distribution?.access_level_has?.some((f: string) => f.includes('separate_wc')) ?? (wizardData.separateToiletPresent === 'Y'))} isModified={isMod('toiletPresent')} isLocked={isLocked} onClick={() => handleOverride('toiletPresent', true)} />
+                                    <SmallCheckbox label="NO (Go to 20)" checked={getVal('toiletPresent', rawAhr.facility_distribution?.access_level_has?.some((f: string) => f.includes('separate_wc')) ?? (wizardData.separateToiletPresent === 'Y')) === false} isModified={isMod('toiletPresent')} isLocked={isLocked} onClick={() => handleOverride('toiletPresent', false)} />
                                 </div>
 
                                 <div style={{ flex: 1 }}>
@@ -2194,16 +2398,16 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                         <span style={{ fontSize: '11px', color: isMod('bathroomTurningSpaceFits150') ? AHR_MODIFIED : '#1e40af', fontWeight: '600', width: '120px', lineHeight: '1.1' }}>Turning space for a<br />wheelchair (150x150)</span>
                                         <div style={{ display: 'flex', gap: '8px' }}>
-                                            <SmallCheckbox label="Y" checked={getVal('bathroomTurningSpaceFits150', rawAhr.room_analysis?.bathroom?.turning_circle?.fits_150cm) === true} isModified={isMod('bathroomTurningSpaceFits150')} isLocked={isLocked} onClick={() => handleOverride('bathroomTurningSpaceFits150', true)} />
-                                            <SmallCheckbox label="N" checked={getVal('bathroomTurningSpaceFits150', rawAhr.room_analysis?.bathroom?.turning_circle?.fits_150cm) === false} isModified={isMod('bathroomTurningSpaceFits150')} isLocked={isLocked} onClick={() => handleOverride('bathroomTurningSpaceFits150', false)} />
+                                            <SmallCheckbox label="Y" checked={getVal('bathroomTurningSpaceFits150', rawAhr.room_analysis?.bathroom?.turning_circle?.fits_150cm ?? (wizardData.bathroomTurning150 === 'Y')) === true} isModified={isMod('bathroomTurningSpaceFits150')} isLocked={isLocked} onClick={() => handleOverride('bathroomTurningSpaceFits150', true)} />
+                                            <SmallCheckbox label="N" checked={getVal('bathroomTurningSpaceFits150', rawAhr.room_analysis?.bathroom?.turning_circle?.fits_150cm ?? (wizardData.bathroomTurning150 === 'Y')) === false} isModified={isMod('bathroomTurningSpaceFits150')} isLocked={isLocked} onClick={() => handleOverride('bathroomTurningSpaceFits150', false)} />
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         <span style={{ fontSize: '11px', color: (isMod('bathroomLength') || isMod('bathroomWidth')) ? AHR_MODIFIED : '#1e40af', fontWeight: '600' }}>Dimensions of Bathroom:</span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <AHR_MeasurementBox segments={4} value={getVal('bathroomLength', '')} unit={null} isModified={isMod('bathroomLength')} isLocked={isLocked} onChange={() => openModal('Bathroom Length', 'bathroomLength', getVal('bathroomLength', ''))} />
+                                            <AHR_MeasurementBox segments={4} value={getVal('bathroomLength', rawAhr.room_analysis?.bathroom?.dimensions_cm?.length ?? wizardData.bathroomLengthCm ?? '')} unit={null} isModified={isMod('bathroomLength')} isLocked={isLocked} onChange={() => openModal('Bathroom Length', 'bathroomLength', getVal('bathroomLength', rawAhr.room_analysis?.bathroom?.dimensions_cm?.length ?? wizardData.bathroomLengthCm ?? ''))} />
                                             <span style={{ color: (isMod('bathroomLength') || isMod('bathroomWidth')) ? AHR_MODIFIED : '#1e40af' }}>x</span>
-                                            <AHR_MeasurementBox segments={4} value={getVal('bathroomWidth', '')} unit={null} isModified={isMod('bathroomWidth')} isLocked={isLocked} onChange={() => openModal('Bathroom Width', 'bathroomWidth', getVal('bathroomWidth', ''))} />
+                                            <AHR_MeasurementBox segments={4} value={getVal('bathroomWidth', rawAhr.room_analysis?.bathroom?.dimensions_cm?.width ?? wizardData.bathroomWidthCm ?? '')} unit={null} isModified={isMod('bathroomWidth')} isLocked={isLocked} onChange={() => openModal('Bathroom Width', 'bathroomWidth', getVal('bathroomWidth', rawAhr.room_analysis?.bathroom?.dimensions_cm?.width ?? wizardData.bathroomWidthCm ?? ''))} />
                                             <span style={{ fontSize: '11px', color: (isMod('bathroomLength') || isMod('bathroomWidth')) ? AHR_MODIFIED : '#1e40af' }}>cm</span>
                                         </div>
                                     </div>
@@ -2235,7 +2439,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <span style={{ fontSize: '10px', color: isMod('bathroomLateralSpace') ? AHR_MODIFIED : '#1e40af', fontWeight: '700', textAlign: 'right', lineHeight: '1.2' }}>Space between midline of toilet<br />and side wall (lateral space)</span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <AHR_MeasurementBox segments={4} value={getVal('bathroomLateralSpace', '')} unit={null} isModified={isMod('bathroomLateralSpace')} isLocked={isLocked} onChange={() => openModal('Bathroom Lateral Space', 'bathroomLateralSpace', getVal('bathroomLateralSpace', ''))} />
+                                            <AHR_MeasurementBox segments={4} value={getVal('bathroomLateralSpace', rawAhr.room_analysis?.bathroom?.lateral_space_cm ?? wizardData.bathroomLateralSpace ?? '')} unit={null} isModified={isMod('bathroomLateralSpace')} isLocked={isLocked} onChange={() => openModal('Bathroom Lateral Space', 'bathroomLateralSpace', getVal('bathroomLateralSpace', rawAhr.room_analysis?.bathroom?.lateral_space_cm ?? wizardData.bathroomLateralSpace ?? ''))} />
                                             <span style={{ fontSize: '11px', color: isMod('bathroomLateralSpace') ? AHR_MODIFIED : '#1e40af' }}>cm</span>
                                         </div>
                                     </div>
@@ -2372,6 +2576,29 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                 </div>
                             </div>
                         </div>
+
+                        {/* Property Location Map */}
+                        {propertyCoords && (
+                            <div style={{ marginTop: '32px' }}>
+                                <h3 style={{ fontSize: '13px', fontWeight: '900', color: '#1e40af', borderBottom: '1.5px solid #bfdbfe', paddingBottom: '4px', marginBottom: '16px' }}>Property Location</h3>
+                                <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', height: '300px' }}>
+                                    <iframe
+                                        title="Property Location Map"
+                                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${propertyCoords.lon - 0.005},${propertyCoords.lat - 0.003},${propertyCoords.lon + 0.005},${propertyCoords.lat + 0.003}&layer=mapnik&marker=${propertyCoords.lat},${propertyCoords.lon}`}
+                                        style={{ width: '100%', height: '300px', border: 'none', display: 'block' }}
+                                        sandbox="allow-scripts"
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                                    <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>
+                                        Approximate location based on postcode: {wizardData.postcode || caseData.postcode}
+                                    </span>
+                                    <span style={{ fontSize: '9px', color: '#94a3b8' }}>
+                                        {propertyCoords.lat.toFixed(5)}, {propertyCoords.lon.toFixed(5)}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                     </SectionBlock>
 
                     <SectionBlock title="" number="">
@@ -2392,7 +2619,7 @@ const ReportView: React.FC<ReportViewProps> = ({ caseData, onBack, onUpdateCase 
                                 onClick={() => {
                                     if (isLocked) return;
                                     const current = getVal('adaptabilityReasoning', rawAhr.adaptability_assessment?.spatial_feasibility?.reasoning || 'Property demonstrates moderate potential for M4(3) adaptation with remedial works to door widths and bathroom layout.');
-                                    openModal('Comments', current, (v) => handleOverride('adaptabilityReasoning', v));
+                                    openModal('Comments', 'adaptabilityReasoning', current);
                                 }}
                                 style={{
                                     minHeight: '180px',

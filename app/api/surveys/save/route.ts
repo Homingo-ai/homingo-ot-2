@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { buildSurveyData } from "@/lib/surveys/buildSurveyData";
 
 // Allow larger payloads for case data with base64 images
 export const maxDuration = 60;
+
+const CATEGORY_SECTION_MAP: Record<string, { section: string; field_reference: string }> = {
+  entrance:  { section: 'D', field_reference: 'entrance' },
+  hallway:   { section: 'F', field_reference: 'hallway' },
+  kitchen:   { section: 'F', field_reference: 'kitchen' },
+  bathroom:  { section: 'F', field_reference: 'bathroom' },
+  stairs:    { section: 'E', field_reference: 'stairs' },
+  garden:    { section: 'E', field_reference: 'garden' },
+  floorPlan: { section: 'C', field_reference: 'floor_plan' },
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,24 +43,10 @@ export async function POST(req: NextRequest) {
     }
 
     const wizardData = caseData.mlData?.wizardData || {};
+    const overrides = caseData.mlData?.userOverrides || {};
+    const rawAhr = caseData.mlData?.rawAhr || {};
 
-    const surveyData = {
-      user_id: user.id,
-      inspector_name: user.email,
-      inspection_date: caseData.assessmentDate || new Date().toISOString(),
-      door_number: wizardData.doorNo || "",
-      street_number: wizardData.streetNo || "",
-      building_name: wizardData.buildingName || "",
-      street: wizardData.street || caseData.address || "",
-      postcode: wizardData.postcode || caseData.postcode || "",
-      compliance_score: caseData.aiScore,
-      status: caseData.status,
-      thumbnail_url: caseData.thumbnail,
-      raw_ai_data: caseData.mlData,
-      comments: caseData.description,
-      overall_grade: caseData.mlData?.aiReport?.Grade,
-      ai_confidence: 0.9,
-    };
+    const surveyData = buildSurveyData(wizardData, overrides, rawAhr, caseData, user.id);
 
     const isExistingRecord =
       caseData.id && !isNaN(Number(caseData.id));
@@ -59,13 +56,13 @@ export async function POST(req: NextRequest) {
     if (isExistingRecord) {
       const { error: updateError } = await supabase
         .from("surveys")
-        .update(surveyData)
+        .update(surveyData as any)
         .eq("id", Number(caseData.id));
       error = updateError;
     } else {
       const { data: insertedData, error: insertError } = await supabase
         .from("surveys")
-        .insert(surveyData)
+        .insert(surveyData as any)
         .select("id")
         .single();
 
@@ -81,6 +78,62 @@ export async function POST(req: NextRequest) {
         { error: error.message },
         { status: 500 }
       );
+    }
+
+    // ── Save evidence records to survey_evidences ──
+    const surveyId = Number(newId);
+    if (surveyId && !isNaN(surveyId)) {
+      const categoryPhotos = wizardData.categoryPhotos || {};
+      const evidenceRecords: any[] = [];
+
+      for (const [category, urls] of Object.entries(categoryPhotos)) {
+        if (!Array.isArray(urls)) continue;
+        const mapping = CATEGORY_SECTION_MAP[category];
+        if (!mapping) continue;
+
+        for (const url of urls as string[]) {
+          if (!url || typeof url !== 'string' || url.startsWith('data:')) continue;
+          const fileName = url.split('/').pop() || `${category}-${Date.now()}.jpg`;
+          const ext = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+          evidenceRecords.push({
+            survey_id: surveyId,
+            file_name: fileName,
+            file_type: ext.toUpperCase(),
+            mime_type: ext === 'png' ? 'image/png' : 'image/jpeg',
+            file_url: url,
+            section: mapping.section,
+            field_reference: mapping.field_reference,
+          });
+        }
+      }
+
+      // Floor plan as evidence
+      if (wizardData.floorPlan && typeof wizardData.floorPlan === 'string' && !wizardData.floorPlan.startsWith('data:')) {
+        const fpMapping = CATEGORY_SECTION_MAP['floorPlan'];
+        evidenceRecords.push({
+          survey_id: surveyId,
+          file_name: wizardData.floorPlan.split('/').pop() || 'floor-plan.jpg',
+          file_type: 'JPEG',
+          mime_type: 'image/jpeg',
+          file_url: wizardData.floorPlan,
+          section: fpMapping.section,
+          field_reference: fpMapping.field_reference,
+        });
+      }
+
+      if (evidenceRecords.length > 0) {
+        // Delete existing evidences for this survey (idempotent on re-save)
+        await supabase.from('survey_evidences').delete().eq('survey_id', surveyId);
+
+        const { error: evidenceError } = await supabase
+          .from('survey_evidences')
+          .insert(evidenceRecords);
+
+        if (evidenceError) {
+          console.error('Error saving evidence records:', evidenceError);
+          // Non-fatal: survey was saved, just evidence records failed
+        }
+      }
     }
 
     revalidatePath("/");

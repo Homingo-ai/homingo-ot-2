@@ -35,5 +35,5 @@ export async function saveSurveyClient(caseData: any): Promise<{
     return { error: data.error || "Failed to save" };
   }
 
-  return { success: true, id: data.id };
+  return { success: true, id: data.id ? String(data.id) : undefined };
 }

@@ -1,4 +1,4 @@
-import { FloorPlanAnalysisResult } from "../../utils/FloorPlanUtils";
+import { FloorPlanAnalysisResult } from "@/lib/utils/FloorPlanUtils";
 
 export interface WizardStepProps {
   formData: any;
@@ -18,4 +18,6 @@ export interface WizardStepProps {
   onClearValidationError?: (categoryId: string) => void;
   onAnalyze?: () => void;
   analysisComplete?: boolean;
+  categoryResults?: Record<string, 'valid' | 'invalid'>;
+  onPhotosChanged?: () => void;
 }

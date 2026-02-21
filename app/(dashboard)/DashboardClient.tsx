@@ -17,6 +17,7 @@ interface DashboardClientProps {
 export default function DashboardClient({ initialCases, user }: DashboardClientProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [isWizardOpen, setIsWizardOpen] = useState(false);
+    const [wizardInitialData, setWizardInitialData] = useState<Partial<Case> | null>(null);
     const [cases, setCases] = useState<Case[]>(initialCases);
     const router = useRouter();
 
@@ -24,11 +25,21 @@ export default function DashboardClient({ initialCases, user }: DashboardClientP
         const selectedCase = cases.find(c => c.id === id);
         if (!selectedCase) return;
 
-        // Navigate to the new case detail page for all cases
-        router.push(`/cases/${id}`);
+        if (selectedCase.status === 'Draft') {
+            setWizardInitialData({
+                id: selectedCase.id,
+                ...(selectedCase.mlData?.wizardData || {}),
+                evidence: selectedCase.evidence,
+                photos: selectedCase.evidence || (selectedCase.mlData?.wizardData as any)?.photos,
+            });
+            setIsWizardOpen(true);
+        } else {
+            router.push(`/cases/${id}`);
+        }
     };
 
     const handleOpenWizard = () => {
+        setWizardInitialData(null);
         setIsWizardOpen(true);
     };
 
@@ -44,8 +55,12 @@ export default function DashboardClient({ initialCases, user }: DashboardClientP
                 return;
             }
             toast.success('Assessment saved successfully');
-            const realId = result.id ?? newCase.id;
-            setCases([{ ...newCase, id: realId }, ...cases]);
+            const realId = (result.id ?? newCase.id).toString();
+            setCases(prev => {
+                const exists = prev.find(c => c.id === realId);
+                if (exists) return prev.map(c => c.id === realId ? { ...newCase, id: realId } : c);
+                return [{ ...newCase, id: realId }, ...prev];
+            });
             router.push(`/cases/${realId}`);
         } catch (error) {
             console.error(error);
@@ -71,10 +86,21 @@ export default function DashboardClient({ initialCases, user }: DashboardClientP
             
             <AssessmentWizard
                 isOpen={isWizardOpen}
-                onClose={() => setIsWizardOpen(false)}
+                onClose={() => {
+                    setIsWizardOpen(false);
+                    setWizardInitialData(null);
+                }}
                 onComplete={handleCompleteWizard}
-                initialData={null}
-                onSaveDraft={(data) => console.log('Draft saved:', data)}
+                initialData={wizardInitialData}
+                onSaveDraft={(draftCase) => {
+                    setCases(prev => {
+                        const exists = prev.find(c => c.id === draftCase.id);
+                        if (exists) return prev.map(c => c.id === draftCase.id ? draftCase : c);
+                        return [draftCase, ...prev];
+                    });
+                    setIsWizardOpen(false);
+                    setWizardInitialData(null);
+                }}
             />
         </div>
     );

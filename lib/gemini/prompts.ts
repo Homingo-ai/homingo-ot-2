@@ -160,6 +160,8 @@ clamp raw_score to [0,1]
 percentage_score = raw_score × 100
 Normalization (optional):
 normalized_score = (percentage_score - 70)/10 * 15 + 70
+CRITICAL: The final AccessibilityScore MUST NEVER exceed 100. Always clamp the final percentage to [0, 100].
+If any calculation yields >100, use exactly 100.0.
 ________________________________________
 STEP 9 — Confidence & Subscores
 •	Explicit user input → confidence 1.0
@@ -178,6 +180,7 @@ Range	Grade
 75–84	B+
 60–74	B−
 0–59	C
+Note: Score is always 0–100. Never output a score above 100.
 ________________________________________
 STEP 11 — Human-Readable Summary
 Provide:
@@ -187,6 +190,7 @@ Provide:
 ⚠️ If the property includes any high-risk mismatch (e.g., bathtub for wheelchair user, steep access path, or narrow doors), override the final grade upward bias: downgrade by one letter grade.
 ________________________________________
 STEP 12 — JSON Output Example
+AccessibilityScore must be a percentage string between 0 and 100 (e.g. "47.3%"). Never exceed 100.
 {
   "AccessibilityScore": "47.3%",
   "Grade": "C",

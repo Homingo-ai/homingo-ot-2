@@ -6,7 +6,7 @@ function isBase64DataUrl(s: unknown): s is string {
   return typeof s === "string" && BASE64_DATA_URL_REGEX.test(s);
 }
 
-async function uploadBase64ToStorage(
+export async function uploadBase64ToStorage(
   dataUrl: string,
   path: string
 ): Promise<string> {

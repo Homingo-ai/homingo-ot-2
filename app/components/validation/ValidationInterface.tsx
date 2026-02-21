@@ -690,9 +690,9 @@ const ValidationInterface: React.FC<ValidationInterfaceProps> = ({ caseData, onB
                                 Confidence
                             </div>
                             <div style={{ fontSize: '32px', fontWeight: '900', color: 'var(--text-main)', lineHeight: 1 }}>
-                                92%
+                                {currentScore}
                             </div>
-                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#10b981', marginTop: '4px' }}>High Accuracy</div>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: parseFloat(String(currentScore)) >= 80 ? '#10b981' : parseFloat(String(currentScore)) >= 50 ? '#f59e0b' : '#ef4444', marginTop: '4px' }}>{parseFloat(String(currentScore)) >= 80 ? 'High Accuracy' : parseFloat(String(currentScore)) >= 50 ? 'Medium Accuracy' : 'Low Accuracy'}</div>
                         </div>
                     </div>
 

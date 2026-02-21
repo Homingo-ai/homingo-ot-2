@@ -21,12 +21,12 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
     processingCategory,
     validationErrors,
     onClearValidationError,
-    onAnalyze,
     isAnalyzing,
-    analysisComplete
+    analysisComplete,
+    categoryResults,
+    onPhotosChanged,
 }) => {
     const categoryPhotos = formData.categoryPhotos || {};
-    const hasPhotos = Object.values(categoryPhotos).flat().length > 0;
 
     const removePhoto = (catId: string, photoIndex: number) => {
         const currentCatPhotos = [...(categoryPhotos[catId] || [])];
@@ -39,8 +39,9 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
         const allCategorizedPhotos = Object.values(updatedCategoryPhotos).flat();
         handleUpdateField('photos', allCategorizedPhotos);
 
-        // Clear validation error when unrelated photo is removed
+        // Clear validation error and reset analysis state so Analyze is required again
         onClearValidationError?.(catId);
+        onPhotosChanged?.();
     };
 
     return (
@@ -48,8 +49,93 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
             initial={{ opacity: 0, scale: 0.99 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.99 }}
-            style={{ padding: '20px' }}
+            style={{ padding: '20px', position: 'relative' }}
         >
+            <AnimatePresence>
+                {isAnalyzing && (
+                    <motion.div
+                        key="analyzing-overlay"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        style={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'rgba(99, 102, 241, 0.08)',
+                            backdropFilter: 'blur(2px)',
+                            borderRadius: '16px',
+                            zIndex: 20,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '16px',
+                            pointerEvents: 'all',
+                        }}
+                    >
+                        <div style={{
+                            background: '#fff',
+                            borderRadius: '20px',
+                            padding: '28px 36px',
+                            boxShadow: '0 8px 32px rgba(99, 102, 241, 0.18)',
+                            border: '1px solid rgba(99, 102, 241, 0.15)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '14px',
+                            minWidth: '220px',
+                        }}>
+                            <div style={{ position: 'relative', width: '48px', height: '48px' }}>
+                                <div style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    borderRadius: '50%',
+                                    border: '3px solid #eef2ff',
+                                }} />
+                                <div style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    borderRadius: '50%',
+                                    border: '3px solid transparent',
+                                    borderTopColor: '#6366f1',
+                                    animation: 'spin 0.8s linear infinite',
+                                }} />
+                                <div style={{
+                                    position: 'absolute',
+                                    inset: '10px',
+                                    borderRadius: '50%',
+                                    background: '#eef2ff',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}>
+                                    <Camera size={14} color="#6366f1" />
+                                </div>
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                                <p style={{ fontWeight: '800', fontSize: '15px', color: '#6366f1', marginBottom: '4px' }}>
+                                    Analysing Photos
+                                </p>
+                                <p style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '500' }}>
+                                    AI is verifying your evidence&hellip;
+                                </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                {[0, 1, 2].map(i => (
+                                    <div key={i} style={{
+                                        width: '7px',
+                                        height: '7px',
+                                        borderRadius: '50%',
+                                        background: '#6366f1',
+                                        animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+                                    }} />
+                                ))}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
             <div style={{ marginBottom: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
@@ -60,7 +146,7 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                         </div>
                         <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '2px', color: 'var(--primary)' }}>Smart Capture</h3>
                         <p style={{ color: 'var(--text-dim)', fontSize: '13px' }}>
-                            Upload up to 3 photos per category for millimetre-perfect AI verification.
+                            Upload photos per category for millimetre-perfect AI verification.
                         </p>
                     </div>
                     {isProcessing && (
@@ -69,66 +155,39 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                             Uploading...
                         </div>
                     )}
-                    
-                    <button
-                        onClick={onAnalyze}
-                        disabled={!hasPhotos || isAnalyzing || isProcessing || analysisComplete}
-                        style={{
-                            padding: '8px 16px',
-                            borderRadius: '12px',
-                            background: analysisComplete ? '#dcfce7' : isAnalyzing ? 'var(--primary-light)' : 'var(--primary)',
-                            color: analysisComplete ? '#166534' : isAnalyzing ? 'var(--primary)' : '#fff',
-                            border: analysisComplete ? '1px solid #bbf7d0' : 'none',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            cursor: (!hasPhotos || isAnalyzing || isProcessing || analysisComplete) ? 'not-allowed' : 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            opacity: (!hasPhotos && !isAnalyzing && !analysisComplete) ? 0.6 : 1,
-                            transition: 'all 0.2s',
-                            boxShadow: analysisComplete ? 'none' : '0 2px 8px rgba(99, 102, 241, 0.25)'
-                        }}
-                    >
-                        {isAnalyzing ? (
-                            <>
-                                <RefreshCw className="animate-spin" size={14} />
-                                Analyzing...
-                            </>
-                        ) : analysisComplete ? (
-                            <>
-                                <CheckCircle size={14} />
-                                Complete
-                            </>
-                        ) : (
-                            <>
-                                <RefreshCw size={14} />
-                                Analyze
-                            </>
-                        )}
-                    </button>
                 </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                {CAPTURE_CATEGORIES.filter(cat => !cat.condition || cat.condition(formData)).map(cat => {
+                {CAPTURE_CATEGORIES.map(cat => {
                     const currentPhotos = categoryPhotos[cat.id] || [];
                     const isFull = currentPhotos.length >= 3;
                     const hasError = validationErrors?.[cat.id];
+                    const analysisResult = categoryResults?.[cat.id];
 
-                    const isUploadBlocked = isProcessing || isAnalyzing;
+                    const isUploadBlocked = isProcessing || isAnalyzing || analysisComplete;
+
+                    const cardBorder = analysisResult === 'valid'
+                        ? '2px solid #22c55e'
+                        : analysisResult === 'invalid' || hasError
+                        ? '2px solid #facc15'
+                        : '1px solid var(--border)';
 
                     return (
                         <div key={cat.id} style={{
                             background: '#fff',
                             borderRadius: '20px',
                             padding: '16px',
-                            border: hasError ? '2px solid #facc15' : '1px solid var(--border)',
+                            border: cardBorder,
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '12px',
-                            transition: 'all 0.2s',
-                            boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
+                            transition: 'border 0.3s',
+                            boxShadow: analysisResult === 'valid'
+                                ? '0 2px 10px rgba(34,197,94,0.08)'
+                                : analysisResult === 'invalid'
+                                ? '0 2px 10px rgba(250,204,21,0.1)'
+                                : '0 2px 10px rgba(0,0,0,0.02)'
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div>
@@ -148,14 +207,24 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                                         </div>
                                     )}
                                 </div>
-                                {cat.required && currentPhotos.length === 0 ? (
-                                    <span style={{ fontSize: '8px', fontWeight: '900', color: '#ef4444', textTransform: 'uppercase', background: '#fef2f2', padding: '2px 6px', borderRadius: '4px' }}>Required</span>
-                                ) : currentPhotos.length > 0 ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#22c55e' }}>
-                                        <CheckCircle size={12} />
-                                        <span style={{ fontSize: '10px', fontWeight: '800' }}>{currentPhotos.length}/3</span>
+                                {analysisResult === 'valid' ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#16a34a', background: '#dcfce7', padding: '2px 7px', borderRadius: '6px' }}>
+                                        <CheckCircle size={11} />
+                                        <span style={{ fontSize: '9px', fontWeight: '900', textTransform: 'uppercase' }}>Verified</span>
                                     </div>
-                                ) : null}
+                                ) : analysisResult === 'invalid' ? (
+                                    <span style={{ fontSize: '8px', fontWeight: '900', color: '#92400e', textTransform: 'uppercase', background: '#fef9c3', padding: '2px 6px', borderRadius: '4px' }}>⚠ Review</span>
+                                ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        {cat.required && currentPhotos.length === 0 && (
+                                            <span style={{ fontSize: '8px', fontWeight: '900', color: '#ef4444', textTransform: 'uppercase', background: '#fef2f2', padding: '2px 6px', borderRadius: '4px' }}>Required</span>
+                                        )}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: currentPhotos.length > 0 ? '#22c55e' : '#94a3b8' }}>
+                                            {currentPhotos.length > 0 && <CheckCircle size={12} />}
+                                            <span style={{ fontSize: '10px', fontWeight: '800' }}>{currentPhotos.length}/3</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
@@ -165,8 +234,8 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                                             <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                             <button
                                                 onClick={() => removePhoto(cat.id, idx)}
-                                                disabled={isAnalyzing}
-                                                style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: isAnalyzing ? 'not-allowed' : 'pointer', zIndex: 10 }}>
+                                                disabled={isAnalyzing || analysisComplete}
+                                                style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: (isAnalyzing || analysisComplete) ? 'not-allowed' : 'pointer', zIndex: 10 }}>
                                                 <Trash2 size={10} />
                                             </button>
                                         </div>
@@ -208,11 +277,11 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                                             accept="image/*"
                                             hidden
                                             onChange={(e) => handlePhotoUpload && handlePhotoUpload(e, cat.id)}
-                                            multiple={false}
+                                            multiple
                                             disabled={isUploadBlocked}
                                         />
                                         <Camera size={currentPhotos.length === 0 ? 20 : 16} color="#94a3b8" />
-                                        {currentPhotos.length === 0 && <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginTop: '4px' }}>Add Photo</span>}
+                                        {currentPhotos.length === 0 && <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginTop: '4px' }}>Add Photos</span>}
                                     </label>
                                 )}
                             </div>

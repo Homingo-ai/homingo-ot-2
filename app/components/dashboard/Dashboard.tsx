@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import CaseCard from "./CaseCard";
 import { Case } from "@/types/dashboard";
-import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils/cn";
 
 interface DashboardProps {
   user: any;
@@ -91,298 +91,121 @@ const Dashboard: React.FC<DashboardProps> = ({
     "Drafts",
   ];
 
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "Completed":
+        return "bg-emerald-50 text-emerald-600";
+      case "Review":
+        return "bg-amber-50 text-amber-600";
+      case "Draft":
+        return "bg-slate-50 text-slate-500";
+      default:
+        return "bg-orange-50 text-orange-600";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "Completed":
+        return "Finalized";
+      case "Review":
+        return "In Review";
+      case "Pending":
+        return "In Progress";
+      default:
+        return status;
+    }
+  };
+
   return (
-    <div
-      style={{
-        padding: "32px 48px",
-        background: "linear-gradient(to bottom, #f8fafc 0%, #ffffff 100%)",
-        minHeight: "calc(100vh - 80px)",
-      }}
-    >
+    <div className="py-8 px-12 bg-gradient-to-b from-slate-50 to-white min-h-[calc(100vh-80px)]">
       {/* Header Section */}
-      <div style={{ marginBottom: "32px" }}>
-        <h1
-          style={{
-            fontSize: "32px",
-            fontWeight: "800",
-            color: "#0f172a",
-            marginBottom: "8px",
-            letterSpacing: "-0.5px",
-          }}
-        >
+      <div className="mb-8">
+        <h1 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">
           Assessment Registry
         </h1>
-        <p
-          style={{
-            fontSize: "15px",
-            color: "#64748b",
-            fontWeight: "500",
-          }}
-        >
+        <p className="text-[15px] text-slate-500 font-medium">
           Official record of accessibility assessments and property evaluations
         </p>
       </div>
 
       {/* Statistics Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "20px",
-          marginBottom: "32px",
-        }}
-      >
-        <div
-          style={{
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            padding: "24px",
-            borderRadius: "16px",
-            boxShadow: "0 4px 20px rgba(102, 126, 234, 0.15)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              marginBottom: "12px",
-            }}
-          >
-            <FileText size={24} color="#fff" />
-            <span
-              style={{
-                fontSize: "13px",
-                color: "rgba(255,255,255,0.9)",
-                fontWeight: "600",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}
-            >
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-5 mb-8">
+        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-2xl shadow-[0_4px_20px_rgba(102,126,234,0.15)]">
+          <div className="flex items-center gap-3 mb-3">
+            <FileText size={24} className="text-white" />
+            <span className="text-[13px] text-white/90 font-semibold uppercase tracking-wider">
               Total Assessments
             </span>
           </div>
-          <div
-            style={{
-              fontSize: "36px",
-              fontWeight: "800",
-              color: "#fff",
-              lineHeight: "1",
-            }}
-          >
+          <div className="text-4xl font-extrabold text-white leading-none">
             {stats.total}
           </div>
         </div>
 
-        <div
-          style={{
-            background: "#fff",
-            padding: "24px",
-            borderRadius: "16px",
-            border: "2px solid #10b981",
-            boxShadow: "0 4px 12px rgba(16, 185, 129, 0.1)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              marginBottom: "12px",
-            }}
-          >
-            <Shield size={24} color="#10b981" />
-            <span
-              style={{
-                fontSize: "13px",
-                color: "#64748b",
-                fontWeight: "600",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}
-            >
+        <div className="bg-white p-6 rounded-2xl border-2 border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.1)]">
+          <div className="flex items-center gap-3 mb-3">
+            <Shield size={24} className="text-emerald-500" />
+            <span className="text-[13px] text-slate-500 font-semibold uppercase tracking-wider">
               Finalized Reports
             </span>
           </div>
-          <div
-            style={{
-              fontSize: "36px",
-              fontWeight: "800",
-              color: "#10b981",
-              lineHeight: "1",
-            }}
-          >
+          <div className="text-4xl font-extrabold text-emerald-500 leading-none">
             {stats.finalized}
           </div>
         </div>
 
-        <div
-          style={{
-            background: "#fff",
-            padding: "24px",
-            borderRadius: "16px",
-            border: "2px solid #d97706",
-            boxShadow: "0 4px 12px rgba(217, 119, 6, 0.1)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              marginBottom: "12px",
-            }}
-          >
-            <Clock size={24} color="#d97706" />
-            <span
-              style={{
-                fontSize: "13px",
-                color: "#64748b",
-                fontWeight: "600",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}
-            >
+        <div className="bg-white p-6 rounded-2xl border-2 border-amber-600 shadow-[0_4px_12px_rgba(217,119,6,0.1)]">
+          <div className="flex items-center gap-3 mb-3">
+            <Clock size={24} className="text-amber-600" />
+            <span className="text-[13px] text-slate-500 font-semibold uppercase tracking-wider">
               In Review
             </span>
           </div>
-          <div
-            style={{
-              fontSize: "36px",
-              fontWeight: "800",
-              color: "#d97706",
-              lineHeight: "1",
-            }}
-          >
+          <div className="text-4xl font-extrabold text-amber-600 leading-none">
             {stats.inReview}
           </div>
         </div>
 
-        <div
-          style={{
-            background: "#fff",
-            padding: "24px",
-            borderRadius: "16px",
-            border: "2px solid #f59e0b",
-            boxShadow: "0 4px 12px rgba(245, 158, 11, 0.1)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              marginBottom: "12px",
-            }}
-          >
-            <Clock size={24} color="#f59e0b" />
-            <span
-              style={{
-                fontSize: "13px",
-                color: "#64748b",
-                fontWeight: "600",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}
-            >
+        <div className="bg-white p-6 rounded-2xl border-2 border-amber-500 shadow-[0_4px_12px_rgba(245,158,11,0.1)]">
+          <div className="flex items-center gap-3 mb-3">
+            <Clock size={24} className="text-amber-500" />
+            <span className="text-[13px] text-slate-500 font-semibold uppercase tracking-wider">
               In Progress
             </span>
           </div>
-          <div
-            style={{
-              fontSize: "36px",
-              fontWeight: "800",
-              color: "#f59e0b",
-              lineHeight: "1",
-            }}
-          >
+          <div className="text-4xl font-extrabold text-amber-500 leading-none">
             {stats.inProgress}
           </div>
         </div>
 
-        <div
-          style={{
-            background: "#fff",
-            padding: "24px",
-            borderRadius: "16px",
-            border: "2px solid #94a3b8",
-            boxShadow: "0 4px 12px rgba(148, 163, 184, 0.1)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              marginBottom: "12px",
-            }}
-          >
-            <FileText size={24} color="#94a3b8" />
-            <span
-              style={{
-                fontSize: "13px",
-                color: "#64748b",
-                fontWeight: "600",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}
-            >
+        <div className="bg-white p-6 rounded-2xl border-2 border-slate-400 shadow-[0_4px_12px_rgba(148,163,184,0.1)]">
+          <div className="flex items-center gap-3 mb-3">
+            <FileText size={24} className="text-slate-400" />
+            <span className="text-[13px] text-slate-500 font-semibold uppercase tracking-wider">
               Draft Queue
             </span>
           </div>
-          <div
-            style={{
-              fontSize: "36px",
-              fontWeight: "800",
-              color: "#94a3b8",
-              lineHeight: "1",
-            }}
-          >
+          <div className="text-4xl font-extrabold text-slate-400 leading-none">
             {stats.drafts}
           </div>
         </div>
       </div>
 
       {/* Controls */}
-      <div
-        style={{
-          background: "#fff",
-          padding: "20px 24px",
-          borderRadius: "16px",
-          marginBottom: "24px",
-          border: "1px solid #e5e7eb",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "16px",
-        }}
-      >
+      <div className="bg-white py-5 px-6 rounded-2xl mb-6 border border-gray-200 flex justify-between items-center flex-wrap gap-4">
         {/* Filters */}
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            background: "#f8fafc",
-            padding: "4px",
-            borderRadius: "10px",
-          }}
-        >
+        <div className="flex gap-2 bg-slate-50 p-1 rounded-[10px]">
           {filters.map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "8px",
-                fontSize: "13px",
-                fontWeight: "700",
-                background: activeFilter === filter ? "#6366f1" : "transparent",
-                color: activeFilter === filter ? "#fff" : "#64748b",
-                transition: "all 0.2s ease",
-                whiteSpace: "nowrap",
-                border: "none",
-                cursor: "pointer",
-              }}
+              className={cn(
+                "py-2 px-4 rounded-lg text-[13px] font-bold transition-all whitespace-nowrap border-none cursor-pointer",
+                activeFilter === filter
+                  ? "bg-primary text-white"
+                  : "bg-transparent text-slate-500"
+              )}
             >
               {filter}
             </button>
@@ -390,68 +213,36 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Sort & View Mode */}
-        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+        <div className="flex gap-3 items-center">
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            style={{
-              padding: "8px 32px 8px 12px",
-              borderRadius: "8px",
-              border: "1px solid #e5e7eb",
-              fontSize: "13px",
-              color: "#475569",
-              outline: "none",
-              cursor: "pointer",
-              fontWeight: "600",
-              background: "#fff",
-            }}
+            className="py-2 pr-8 pl-3 rounded-lg border border-gray-200 text-[13px] text-slate-600 outline-none cursor-pointer font-semibold bg-white"
           >
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>
           </select>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "4px",
-              background: "#f8fafc",
-              padding: "4px",
-              borderRadius: "8px",
-            }}
-          >
+          <div className="flex gap-1 bg-slate-50 p-1 rounded-lg">
             <button
               onClick={() => setViewMode("grid")}
-              style={{
-                padding: "8px",
-                borderRadius: "6px",
-                background: viewMode === "grid" ? "#fff" : "transparent",
-                color: viewMode === "grid" ? "#6366f1" : "#94a3b8",
-                border: "none",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow:
-                  viewMode === "grid" ? "0 2px 4px rgba(0,0,0,0.05)" : "none",
-              }}
+              className={cn(
+                "p-2 rounded-md border-none cursor-pointer flex items-center justify-center",
+                viewMode === "grid"
+                  ? "bg-white text-primary shadow-sm"
+                  : "bg-transparent text-slate-400"
+              )}
             >
               <GridIcon size={18} />
             </button>
             <button
               onClick={() => setViewMode("list")}
-              style={{
-                padding: "8px",
-                borderRadius: "6px",
-                background: viewMode === "list" ? "#fff" : "transparent",
-                color: viewMode === "list" ? "#6366f1" : "#94a3b8",
-                border: "none",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow:
-                  viewMode === "list" ? "0 2px 4px rgba(0,0,0,0.05)" : "none",
-              }}
+              className={cn(
+                "p-2 rounded-md border-none cursor-pointer flex items-center justify-center",
+                viewMode === "list"
+                  ? "bg-white text-primary shadow-sm"
+                  : "bg-transparent text-slate-400"
+              )}
             >
               <List size={18} />
             </button>
@@ -461,31 +252,15 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Content */}
       {filteredCases.length === 0 ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "80px 0",
-            color: "#94a3b8",
-          }}
-        >
-          <Filter size={48} style={{ margin: "0 auto 16px", opacity: 0.3 }} />
-          <h3
-            style={{ fontSize: "18px", fontWeight: "700", marginBottom: "8px" }}
-          >
-            No cases found
-          </h3>
-          <p style={{ fontSize: "14px", fontWeight: "500" }}>
+        <div className="text-center py-20 text-slate-400">
+          <Filter size={48} className="mx-auto mb-4 opacity-30" />
+          <h3 className="text-lg font-bold mb-2">No cases found</h3>
+          <p className="text-sm font-medium">
             Try adjusting your filters or search criteria
           </p>
         </div>
       ) : viewMode === "grid" ? (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            gap: "24px",
-          }}
-        >
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-6">
           {filteredCases.map((caseData) => (
             <CaseCard
               key={caseData.id}
@@ -495,159 +270,56 @@ const Dashboard: React.FC<DashboardProps> = ({
           ))}
         </div>
       ) : (
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: "16px",
-            overflow: "hidden",
-            border: "1px solid #e5e7eb",
-          }}
-        >
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "14px",
-            }}
-          >
+        <div className="bg-white rounded-2xl overflow-hidden border border-gray-200">
+          <table className="w-full border-collapse text-sm">
             <thead>
-              <tr
-                style={{
-                  background: "#f8fafc",
-                  textAlign: "left",
-                  color: "#64748b",
-                  fontSize: "12px",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                <th style={{ padding: "16px 24px", fontWeight: "700" }}>
-                  Case ID
-                </th>
-                <th style={{ padding: "16px 24px", fontWeight: "700" }}>
-                  Property
-                </th>
-                <th style={{ padding: "16px 24px", fontWeight: "700" }}>
-                  Applicant
-                </th>
-                <th style={{ padding: "16px 24px", fontWeight: "700" }}>
-                  Date
-                </th>
-                <th style={{ padding: "16px 24px", fontWeight: "700" }}>
-                  Status
-                </th>
-                <th style={{ padding: "16px 24px", fontWeight: "700" }}>
-                  Action
-                </th>
+              <tr className="bg-slate-50 text-left text-slate-500 text-xs uppercase tracking-wider">
+                <th className="py-4 px-6 font-bold">Case ID</th>
+                <th className="py-4 px-6 font-bold">Property</th>
+                <th className="py-4 px-6 font-bold">Applicant</th>
+                <th className="py-4 px-6 font-bold">Date</th>
+                <th className="py-4 px-6 font-bold">Status</th>
+                <th className="py-4 px-6 font-bold">Action</th>
               </tr>
             </thead>
             <tbody>
               {filteredCases.map((c) => (
                 <tr
                   key={c.id}
-                  style={{
-                    borderTop: "1px solid #f1f5f9",
-                    transition: "background 0.2s",
-                  }}
+                  className="border-t border-slate-100 transition-colors"
                 >
-                  <td
-                    style={{
-                      padding: "16px 24px",
-                      fontWeight: "700",
-                      color: "#6366f1",
-                    }}
-                  >
-                    {c.id}
-                  </td>
-                  <td style={{ padding: "16px 24px" }}>
-                    <div style={{ fontWeight: "600", color: "#0f172a" }}>
+                  <td className="py-4 px-6 font-bold text-primary">{c.id}</td>
+                  <td className="py-4 px-6">
+                    <div className="font-semibold text-slate-900">
                       {c.address || "Address Pending"}
                     </div>
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        color: "#94a3b8",
-                        marginTop: "2px",
-                      }}
-                    >
+                    <div className="text-xs text-slate-400 mt-0.5">
                       {c.city || "Location TBC"}
                     </div>
                   </td>
-                  <td
-                    style={{
-                      padding: "16px 24px",
-                      color: "#475569",
-                      fontWeight: "500",
-                    }}
-                  >
+                  <td className="py-4 px-6 text-slate-600 font-medium">
                     {c.applicantName || "Anonymous"}
                   </td>
-                  <td style={{ padding: "16px 24px", color: "#64748b" }}>
+                  <td className="py-4 px-6 text-slate-500">
                     {c.assessmentDate
                       ? new Date(c.assessmentDate).toLocaleDateString()
                       : "N/A"}
                   </td>
-                  <td style={{ padding: "16px 24px" }}>
+                  <td className="py-4 px-6">
                     <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        fontSize: "12px",
-                        fontWeight: "700",
-                        padding: "6px 12px",
-                        borderRadius: "8px",
-                        background:
-                          c.status === "Completed"
-                            ? "#ecfdf5"
-                            : c.status === "Review"
-                              ? "#fffbeb"
-                              : c.status === "Draft"
-                                ? "#f8fafc"
-                                : "#fff7ed",
-                        color:
-                          c.status === "Completed"
-                            ? "#059669"
-                            : c.status === "Review"
-                              ? "#d97706"
-                              : c.status === "Draft"
-                                ? "#64748b"
-                                : "#ea580c",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.3px",
-                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 text-xs font-bold py-1.5 px-3 rounded-lg uppercase tracking-wider",
+                        getStatusBadgeClass(c.status)
+                      )}
                     >
-                      <div
-                        style={{
-                          width: "6px",
-                          height: "6px",
-                          borderRadius: "50%",
-                          background: "currentColor",
-                        }}
-                      />
-                      {c.status === "Completed"
-                        ? "Finalized"
-                        : c.status === "Review"
-                          ? "In Review"
-                          : c.status === "Pending"
-                            ? "In Progress"
-                            : c.status}
+                      <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                      {getStatusLabel(c.status)}
                     </span>
                   </td>
-                  <td style={{ padding: "16px 24px" }}>
+                  <td className="py-4 px-6">
                     <button
                       onClick={() => onSelectCase(c.id)}
-                      style={{
-                        padding: "8px 16px",
-                        borderRadius: "8px",
-                        background: "#6366f1",
-                        color: "#fff",
-                        fontSize: "13px",
-                        fontWeight: "700",
-                        border: "none",
-                        cursor: "pointer",
-                        transition: "all 0.2s",
-                      }}
+                      className="py-2 px-4 rounded-lg bg-primary text-white text-[13px] font-bold border-none cursor-pointer transition-all"
                     >
                       Open Record
                     </button>

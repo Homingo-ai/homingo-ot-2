@@ -16,14 +16,14 @@ const PropertyAccessStep: React.FC<WizardStepProps> = ({
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}
+            className="p-4 flex flex-col gap-4"
         >
-            <div style={{ marginBottom: '0px' }}>
-                <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--primary)', marginBottom: '2px' }}>Property & Access</h3>
-                <p style={{ color: 'var(--text-dim)', fontSize: '13px' }}>Verify the building type and accessibility features.</p>
+            <div className="mb-0">
+                <h3 className="text-xl font-extrabold text-primary mb-0.5">Property & Access</h3>
+                <p className="text-text-dim text-[13px]">Verify the building type and accessibility features.</p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="flex flex-col gap-3">
                 {/* Property Type */}
                 <AIConfirmationCard
                     label="Property Type"
@@ -53,18 +53,15 @@ const PropertyAccessStep: React.FC<WizardStepProps> = ({
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            style={{ overflow: 'hidden' }}
+                            className="overflow-hidden"
                         >
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '8px', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Name of Housing Association</label>
+                            <label className="block text-[11px] font-bold mb-2 text-text-dim uppercase">Name of Housing Association</label>
                             <input
                                 type="text"
                                 placeholder="e.g. Clarion Housing"
                                 value={formData.housingAssociationName || ''}
                                 onChange={(e) => handleUpdateField('housingAssociationName', e.target.value)}
-                                style={{
-                                    width: '100%', padding: '12px 16px', borderRadius: '12px',
-                                    border: '1px solid var(--border)', background: '#fff', fontSize: '14px', outline: 'none'
-                                }}
+                                className="w-full py-3 px-4 rounded-xl border border-border bg-white text-sm outline-none"
                             />
                         </motion.div>
                     )}

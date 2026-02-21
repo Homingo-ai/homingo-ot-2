@@ -4,6 +4,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { MapPin, Calendar, FileText, Shield, Clock } from "lucide-react";
 import { Case } from "@/types/dashboard";
+import { cn } from "@/lib/utils/cn";
 
 interface CaseCardProps {
   caseData: Case;
@@ -16,41 +17,31 @@ const CaseCard: React.FC<CaseCardProps> = ({ caseData, onClick }) => {
       case "Pending":
         return {
           icon: Clock,
-          color: "#ea580c",
-          bg: "#fff7ed",
-          border: "#fed7aa",
+          className: "bg-orange-50 text-orange-600 border-orange-200",
           label: "In Progress",
         };
       case "Completed":
         return {
           icon: Shield,
-          color: "#059669",
-          bg: "#ecfdf5",
-          border: "#a7f3d0",
+          className: "bg-emerald-50 text-emerald-600 border-emerald-200",
           label: "Finalized",
         };
       case "Review":
         return {
           icon: Clock,
-          color: "#d97706",
-          bg: "#fffbeb",
-          border: "#fde68a",
+          className: "bg-amber-50 text-amber-600 border-amber-200",
           label: "In Review",
         };
       case "Draft":
         return {
           icon: FileText,
-          color: "#64748b",
-          bg: "#f8fafc",
-          border: "#e2e8f0",
+          className: "bg-slate-50 text-slate-500 border-slate-200",
           label: "Draft",
         };
       default:
         return {
           icon: FileText,
-          color: "#64748b",
-          bg: "#f8fafc",
-          border: "#e2e8f0",
+          className: "bg-slate-50 text-slate-500 border-slate-200",
           label: status,
         };
     }
@@ -67,133 +58,55 @@ const CaseCard: React.FC<CaseCardProps> = ({ caseData, onClick }) => {
     <motion.div
       whileHover={{ translateY: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.08)" }}
       onClick={() => onClick(caseData.id)}
-      style={{
-        cursor: "pointer",
-        background: "#fff",
-        borderRadius: "16px",
-        overflow: "hidden",
-        border: "1px solid #e5e7eb",
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        position: "relative",
-      }}
+      className="cursor-pointer bg-white rounded-2xl overflow-hidden border border-gray-200 transition-all duration-300 relative"
     >
       {/* Property Image */}
-      <div
-        style={{ position: "relative", height: "140px", overflow: "hidden" }}
-      >
+      <div className="relative h-[140px] overflow-hidden">
         <img
           src={
             displayImage ||
             "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=400&q=80"
           }
           alt={caseData.address}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-          }}
+          className="w-full h-full object-cover"
         />
         <div
-          style={{
-            position: "absolute",
-            top: "12px",
-            right: "12px",
-            background: statusConfig.bg,
-            padding: "6px 12px",
-            borderRadius: "8px",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            border: `1px solid ${statusConfig.border}`,
-            backdropFilter: "blur(8px)",
-          }}
+          className={cn(
+            "absolute top-3 right-3 py-1.5 px-3 rounded-lg flex items-center gap-1.5 border backdrop-blur-md",
+            statusConfig.className
+          )}
         >
-          <StatusIcon size={14} color={statusConfig.color} />
-          <span
-            style={{
-              fontSize: "11px",
-              fontWeight: "700",
-              color: statusConfig.color,
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-            }}
-          >
+          <StatusIcon size={14} className="shrink-0" />
+          <span className="text-[11px] font-bold uppercase tracking-wider">
             {statusConfig.label}
           </span>
         </div>
       </div>
 
       {/* Card Content */}
-      <div style={{ padding: "16px" }}>
+      <div className="p-4">
         {/* Case ID */}
-        <div
-          style={{
-            fontSize: "11px",
-            fontWeight: "700",
-            color: "#6366f1",
-            marginBottom: "6px",
-            textTransform: "uppercase",
-            letterSpacing: "0.8px",
-          }}
-        >
+        <div className="text-[11px] font-bold text-primary mb-1.5 uppercase tracking-wider">
           {caseData.id}
         </div>
 
         {/* Address */}
-        <h3
-          style={{
-            fontSize: "16px",
-            fontWeight: "700",
-            color: "#0f172a",
-            marginBottom: "4px",
-            lineHeight: "1.3",
-          }}
-        >
+        <h3 className="text-base font-bold text-slate-900 mb-1 leading-tight">
           {caseData.address || "Address Pending"}
         </h3>
 
         {/* Applicant Name */}
-        <div
-          style={{
-            fontSize: "13px",
-            color: "#64748b",
-            marginBottom: "12px",
-            fontWeight: "500",
-          }}
-        >
+        <div className="text-[13px] text-slate-500 mb-3 font-medium">
           {caseData.applicantName || "Anonymous Client"}
         </div>
 
         {/* Meta Information */}
-        <div
-          style={{
-            display: "flex",
-            gap: "16px",
-            paddingTop: "12px",
-            borderTop: "1px solid #f1f5f9",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              fontSize: "12px",
-              color: "#64748b",
-            }}
-          >
+        <div className="flex gap-4 pt-3 border-t border-slate-100">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <MapPin size={14} />
             <span>{caseData.city || "Location TBC"}</span>
           </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              fontSize: "12px",
-              color: "#64748b",
-            }}
-          >
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <Calendar size={14} />
             <span>
               {caseData.assessmentDate

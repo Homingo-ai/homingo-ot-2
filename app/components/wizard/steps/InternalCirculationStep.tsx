@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUpRight, HandHelping, Info, ArrowDownCircle } from 'lucide-react';
+import { ArrowUpRight, ArrowDownCircle } from 'lucide-react';
 import { WizardStepProps } from '../types';
 import { AIConfirmationCard } from '../AIConfirmationCard';
 
@@ -16,14 +16,14 @@ const InternalCirculationStep: React.FC<WizardStepProps> = ({
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}
+            className="p-4 flex flex-col gap-3"
         >
-            <div style={{ marginBottom: '0px' }}>
-                <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--primary)', marginBottom: '2px' }}>Internal Circulation</h3>
-                <p style={{ color: 'var(--text-dim)', fontSize: '13px' }}>Confirm internal doors, stairs and corridor widths.</p>
+            <div className="mb-0">
+                <h3 className="text-xl font-extrabold text-primary mb-0.5">Internal Circulation</h3>
+                <p className="text-text-dim text-[13px]">Confirm internal doors, stairs and corridor widths.</p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="flex flex-col gap-3">
                 {/* Main Stairs Detection */}
                 <AIConfirmationCard
                     label="Internal Stairs"
@@ -45,15 +45,15 @@ const InternalCirculationStep: React.FC<WizardStepProps> = ({
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '12px' }}
+                            className="overflow-hidden flex flex-col gap-3"
                         >
-                            <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-2 gap-4">
                                 <div>
-                                    <label style={subLabelStyle}>Stair Geometry</label>
+                                    <label className="block text-[10px] font-extrabold text-slate-500 mb-1.5 uppercase tracking-wider">Stair Geometry</label>
                                     <select
                                         value={formData.internalStairsType || ''}
                                         onChange={(e) => handleUpdateField('internalStairsType', e.target.value)}
-                                        style={selectStyle}
+                                        className="w-full py-2.5 px-2.5 rounded-[10px] border border-slate-300 bg-white text-sm outline-none"
                                     >
                                         <option value="">Select Type...</option>
                                         <option value="Straight">Straight</option>
@@ -64,11 +64,11 @@ const InternalCirculationStep: React.FC<WizardStepProps> = ({
                                     </select>
                                 </div>
                                 <div>
-                                    <label style={subLabelStyle}>Handrails</label>
+                                    <label className="block text-[10px] font-extrabold text-slate-500 mb-1.5 uppercase tracking-wider">Handrails</label>
                                     <select
                                         value={formData.internalHandrails || ''}
                                         onChange={(e) => handleUpdateField('internalHandrails', e.target.value)}
-                                        style={selectStyle}
+                                        className="w-full py-2.5 px-2.5 rounded-[10px] border border-slate-300 bg-white text-sm outline-none"
                                     >
                                         <option value="">Select Side...</option>
                                         <option value="None">None</option>
@@ -95,26 +95,6 @@ const InternalCirculationStep: React.FC<WizardStepProps> = ({
             </div>
         </motion.div>
     );
-};
-
-const subLabelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: '10px',
-    fontWeight: '800',
-    color: '#64748b',
-    marginBottom: '6px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px'
-};
-
-const selectStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '10px',
-    borderRadius: '10px',
-    border: '1px solid #cbd5e1',
-    background: '#fff',
-    fontSize: '14px',
-    outline: 'none'
 };
 
 export default InternalCirculationStep;

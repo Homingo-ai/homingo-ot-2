@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle, XCircle, AlertTriangle, Edit3, ArrowRight, X, RefreshCw, User, Bath, Toilet, Trash2, Home, MapPin, Calendar, Image as ImageIcon, FileText, Loader } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Edit3, ArrowRight, X, User, Bath, Toilet, Trash2, Home, Calendar, Image as ImageIcon, FileText, Loader } from 'lucide-react';
 import AddObservationModal from './AddObservationModal';
 import ActivityTimeline from './ActivityTimeline';
 import { COEFFICIENTS } from '@/lib/hooks/useScoringEngine';
 import { Case } from '@/types/dashboard';
+import { cn } from '@/lib/utils/cn';
 
 const getScoreColor = (score: string | number): string => {
     const s = typeof score === 'string' ? parseFloat(score) : score;
@@ -32,45 +33,24 @@ interface PhotoGalleryProps {
 const PhotoGallery: React.FC<PhotoGalleryProps> = ({ photos, onPhotoClick }) => {
     if (!photos || photos.length === 0) {
         return (
-            <div style={{
-                height: '100px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'var(--bg-surface)',
-                borderRadius: '12px',
-                border: '1px dashed var(--border)',
-                color: 'var(--text-dim)',
-                fontSize: '13px',
-                gap: '8px'
-            }}>
+            <div className="h-[100px] flex items-center justify-center bg-slate-50 rounded-xl border border-dashed border-border text-text-dim text-[13px] gap-2">
                 <ImageIcon size={16} /> No photos provided
             </div>
         );
     }
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '12px' }}>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
             {photos.map((photo, idx) => (
                 <div
                     key={idx}
                     onClick={() => onPhotoClick(photo)}
-                    style={{
-                        aspectRatio: '1',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        cursor: 'pointer',
-                        border: '2px solid var(--border)',
-                        transition: 'all 0.2s ease',
-                        position: 'relative'
-                    }}
-                    onMouseOver={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                    onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                    className="aspect-square rounded-xl overflow-hidden cursor-pointer border-2 border-border transition-all relative hover:border-primary"
                 >
                     <img
                         src={photo}
                         alt={`Evidence ${idx + 1}`}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        className="w-full h-full object-cover"
                     />
                 </div>
             ))}
@@ -87,34 +67,11 @@ const PhotoModal: React.FC<PhotoModalProps> = ({ photo, onClose }) => {
     if (!photo) return null;
 
     return (
-        <div onClick={onClose} style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.9)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px'
-        }}>
-            <button onClick={onClose} style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                background: 'rgba(255,255,255,0.1)',
-                border: 'none',
-                borderRadius: '50%',
-                width: '40px',
-                height: '40px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: '#fff'
-            }}>
+        <div onClick={onClose} className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center p-5">
+            <button onClick={onClose} className="absolute top-5 right-5 bg-white/10 border-none rounded-full w-10 h-10 flex items-center justify-center cursor-pointer text-white">
                 <X size={24} />
             </button>
-            <img src={photo} alt="Full size" style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: '12px' }} />
+            <img src={photo} alt="Full size" className="max-w-full max-h-full rounded-xl" />
         </div>
     );
 };
@@ -126,33 +83,15 @@ interface InfoCardProps {
 }
 
 const InfoCard: React.FC<InfoCardProps> = ({ icon: Icon, label, value }) => (
-    <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '16px',
-        background: 'var(--bg-surface)',
-        borderRadius: '12px',
-        border: '1px solid var(--border)'
-    }}>
-        <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '10px',
-            background: 'var(--primary)',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0
-        }}>
+    <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-border">
+        <div className="w-10 h-10 rounded-[10px] bg-primary text-white flex items-center justify-center shrink-0">
             <Icon size={20} />
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <div className="flex-1 min-w-0">
+            <div className="text-[11px] font-bold text-text-dim uppercase tracking-wider">
                 {label}
             </div>
-            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div className="text-sm font-bold text-text-main mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">
                 {value}
             </div>
         </div>
@@ -170,47 +109,24 @@ interface UserInputItemProps {
 }
 
 const UserInputItem: React.FC<UserInputItemProps> = ({ icon: Icon, label, value, isEditing, onEdit, options, onChange }) => (
-    <div style={{
-        padding: '20px',
-        background: '#fff',
-        borderRadius: '12px',
-        border: '1px solid var(--border)'
-    }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '10px',
-                    background: 'var(--primary)',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}>
+    <div className="p-5 bg-white rounded-xl border border-border">
+        <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-[10px] bg-primary text-white flex items-center justify-center">
                     <Icon size={18} />
                 </div>
                 <div>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-dim)', textTransform: 'uppercase' }}>
+                    <div className="text-xs font-bold text-text-dim uppercase">
                         {label}
                     </div>
                 </div>
             </div>
             <button
                 onClick={onEdit}
-                style={{
-                    padding: '6px 12px',
-                    borderRadius: '8px',
-                    background: isEditing ? '#fee2e2' : 'var(--bg-surface)',
-                    border: '1px solid var(--border)',
-                    color: isEditing ? '#dc2626' : 'var(--text-dim)',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                }}
+                className={cn(
+                    "py-1.5 px-3 rounded-lg border border-border text-xs font-bold cursor-pointer flex items-center gap-1.5",
+                    isEditing ? "bg-red-50 border-red-200 text-red-600" : "bg-slate-50 text-text-dim"
+                )}
             >
                 <Edit3 size={14} /> {isEditing ? 'Cancel' : 'Edit'}
             </button>
@@ -220,23 +136,14 @@ const UserInputItem: React.FC<UserInputItemProps> = ({ icon: Icon, label, value,
             <select
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border)',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    outline: 'none',
-                    cursor: 'pointer'
-                }}
+                className="w-full py-3 px-3 rounded-lg border border-border text-sm font-semibold outline-none cursor-pointer"
             >
                 {Object.keys(options).map(opt => (
                     <option key={opt} value={opt}>{opt}</option>
                 ))}
             </select>
         ) : (
-            <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>
+            <div className="text-[15px] font-bold text-text-main">
                 {value}
             </div>
         )}
@@ -261,20 +168,14 @@ const InferredItem: React.FC<InferredItemProps> = ({ title, questionKey, value, 
     };
 
     return (
-        <div style={{
-            padding: '20px',
-            background: '#fff',
-            borderRadius: '12px',
-            border: '1px solid var(--border)',
-            position: 'relative'
-        }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>
+        <div className="p-5 bg-white rounded-xl border border-border relative">
+            <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                    <div className="text-[13px] font-extrabold text-text-main mb-1">
                         {title}
                     </div>
                     {!isEditing && (
-                        <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-dim)' }}>
+                        <div className="text-sm font-semibold text-text-dim">
                             {value || 'Not detected'}
                         </div>
                     )}
@@ -282,22 +183,11 @@ const InferredItem: React.FC<InferredItemProps> = ({ title, questionKey, value, 
                 <button
                     onClick={() => setIsEditing(!isEditing)}
                     disabled={isRescoring}
-                    style={{
-                        padding: '6px 12px',
-                        borderRadius: '8px',
-                        background: isEditing ? '#fee2e2' : 'var(--bg-surface)',
-                        border: '1px solid var(--border)',
-                        color: isEditing ? '#dc2626' : 'var(--primary)',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        cursor: isRescoring ? 'not-allowed' : 'pointer',
-                        opacity: isRescoring ? 0.5 : 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        flexShrink: 0,
-                        marginLeft: '8px'
-                    }}
+                    className={cn(
+                        "py-1.5 px-3 rounded-lg border border-border text-[11px] font-bold flex items-center gap-1.5 shrink-0 ml-2",
+                        isEditing ? "bg-red-50 border-red-200 text-red-600" : "bg-slate-50 text-primary",
+                        isRescoring && "cursor-not-allowed opacity-50"
+                    )}
                 >
                     <Edit3 size={14} /> {isEditing ? 'Cancel' : 'Edit'}
                 </button>
@@ -308,16 +198,7 @@ const InferredItem: React.FC<InferredItemProps> = ({ title, questionKey, value, 
                     value={value}
                     onChange={(e) => handleSave(e.target.value)}
                     disabled={isRescoring}
-                    style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: '1px solid var(--border)',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        outline: 'none',
-                        cursor: 'pointer'
-                    }}
+                    className="w-full py-3 px-3 rounded-lg border border-border text-sm font-semibold outline-none cursor-pointer"
                 >
                     {Object.keys(options).map(opt => (
                         <option key={opt} value={opt}>{opt}</option>
@@ -497,18 +378,18 @@ const ValidationInterface: React.FC<ValidationInterfaceProps> = ({ caseData, onB
 
     if (showSuccess) {
         return (
-            <div style={{ background: '#f8f9fc', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <div className="bg-slate-50 min-h-screen flex items-center justify-center p-5">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    style={{ textAlign: 'center', maxWidth: '500px' }}
+                    className="text-center max-w-[500px]"
                 >
-                    <CheckCircle size={64} color="#059669" style={{ marginBottom: '24px' }} />
-                    <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '12px' }}>Assessment Completed!</h2>
-                    <p style={{ color: 'var(--text-dim)', fontSize: '16px', marginBottom: '32px' }}>The assessment has been saved and is ready for reporting.</p>
-                    <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button onClick={onBack} style={{ padding: '14px 24px', borderRadius: '12px', background: 'var(--bg-surface)', fontWeight: '700', border: '1px solid var(--border)' }}>Return to Dashboard</button>
-                        <button onClick={onOpenReport} style={{ padding: '14px 32px', borderRadius: '12px', background: 'var(--primary)', color: '#fff', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: 'var(--shadow-sm)', border: 'none' }}>View Official Report <ArrowRight size={18} /></button>
+                    <CheckCircle size={64} className="text-emerald-600 mb-6" />
+                    <h2 className="text-2xl font-extrabold text-text-main mb-3">Assessment Completed!</h2>
+                    <p className="text-text-dim text-base mb-8">The assessment has been saved and is ready for reporting.</p>
+                    <div className="flex gap-4 justify-center flex-wrap">
+                        <button onClick={onBack} className="py-3.5 px-6 rounded-xl bg-slate-50 font-bold border border-border">Return to Dashboard</button>
+                        <button onClick={onOpenReport} className="py-3.5 px-8 rounded-xl bg-primary text-white font-extrabold flex items-center gap-2 shadow-sm border-none">View Official Report <ArrowRight size={18} /></button>
                     </div>
                 </motion.div>
             </div>
@@ -639,7 +520,7 @@ const ValidationInterface: React.FC<ValidationInterfaceProps> = ({ caseData, onB
                                 Score
                             </div>
                             {isRescoring ? (
-                                <Loader className="spin" size={32} />
+                                <Loader className="animate-spin" size={32} />
                             ) : (
                                 <>
                                     <div style={{ fontSize: '48px', fontWeight: '900', lineHeight: 1 }}>
@@ -837,49 +718,29 @@ const ValidationInterface: React.FC<ValidationInterfaceProps> = ({ caseData, onB
                     </div>
                     <ActivityTimeline observations={observations} onAddFollowup={() => { }} />
                 </div>
-            </div >
+            </div>
 
             {/* Fixed Footer */}
-            < div style={{
-                position: 'fixed',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                background: '#fff',
-                borderTop: '1px solid var(--border)',
-                padding: '20px 24px',
-                zIndex: 100,
-                boxShadow: '0 -4px 12px rgba(0,0,0,0.05)'
-            }}>
-                <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-                    <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-border py-5 px-6 z-[100] shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+                <div className="max-w-[1200px] mx-auto flex justify-between items-center flex-wrap gap-4">
+                    <div className="flex gap-6 items-center flex-wrap">
                         <div>
-                            <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: '700', textTransform: 'uppercase' }}>Last Updated</div>
-                            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)' }}>Just now</div>
+                            <div className="text-[11px] text-text-dim font-bold uppercase">Last Updated</div>
+                            <div className="text-sm font-bold text-text-main">Just now</div>
                         </div>
                     </div>
 
                     <button
                         disabled={isSubmitting || isRescoring}
                         onClick={(caseData.status === 'Completed' || caseData.status === 'Review') ? onOpenReport : handleSubmit}
-                        style={{
-                            padding: '14px 32px',
-                            borderRadius: '12px',
-                            background: (isSubmitting || isRescoring) ? '#cbd5e1' : 'var(--primary)',
-                            color: '#fff',
-                            border: 'none',
-                            fontSize: '15px',
-                            fontWeight: '800',
-                            cursor: (isSubmitting || isRescoring) ? 'not-allowed' : 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            boxShadow: (isSubmitting || isRescoring) ? 'none' : '0 4px 12px var(--primary-glow)'
-                        }}
+                        className={cn(
+                            "py-3.5 px-8 rounded-xl text-[15px] font-extrabold border-none flex items-center gap-2.5",
+                            (isSubmitting || isRescoring) ? "bg-slate-300 text-white cursor-not-allowed" : "bg-primary text-white cursor-pointer shadow-[0_4px_12px_var(--primary-glow)]"
+                        )}
                     >
                         {isSubmitting ? (
                             <>
-                                <Loader className="spin" size={20} />
+                                <Loader className="animate-spin" size={20} />
                                 Processing...
                             </>
                         ) : (caseData.status === 'Completed' || caseData.status === 'Review') ? (
@@ -895,10 +756,10 @@ const ValidationInterface: React.FC<ValidationInterfaceProps> = ({ caseData, onB
                         )}
                     </button>
                 </div>
-            </div >
+            </div>
 
             {/* Photo Modal */}
-            < PhotoModal photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
+            <PhotoModal photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
 
             {/* Observation Modal */}
             <AddObservationModal
@@ -908,7 +769,7 @@ const ValidationInterface: React.FC<ValidationInterfaceProps> = ({ caseData, onB
                 user={user}
                 caseId={caseData.id}
             />
-        </div >
+        </div>
     );
 };
 

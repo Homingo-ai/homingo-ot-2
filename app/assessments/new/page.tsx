@@ -31,7 +31,7 @@ export default function NewAssessmentPage() {
   };
 
   return (
-    <div style={{ height: "100vh", background: "#f8fafc" }}>
+    <div className="min-h-screen bg-slate-50">
       <AssessmentWizard
         isOpen={true}
         onClose={() => router.push("/")}

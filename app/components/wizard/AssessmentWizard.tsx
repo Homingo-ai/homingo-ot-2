@@ -48,6 +48,7 @@ import SmartCaptureStep from "./steps/SmartCaptureStep";
 import AnalysisStep from "./steps/AnalysisStep";
 
 import { Case } from "@/types/dashboard";
+import { cn } from "@/lib/utils/cn";
 
 const steps = [
   { id: 1, title: "Client", icon: <User size={18} /> },
@@ -638,18 +639,18 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div style={overlayStyle}>
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 z-[1000]">
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 40 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 40 }}
-        style={modalStyle}
+        className="w-full max-w-[780px] h-[85vh] bg-white/95 rounded-[20px] flex flex-col overflow-hidden shadow-2xl border border-white/70"
       >
         {/* Header Section */}
         <ProgressBar currentStep={step} steps={steps} />
 
         {/* Content Area */}
-        <div style={contentStyle}>
+        <div className="flex-1 overflow-y-auto px-4">
           <AnimatePresence mode="wait">
             {step === 1 && (
               <ClientInfoStep
@@ -749,16 +750,16 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
         </div>
 
         {/* Footer Controls */}
-        <div style={footerStyle}>
-          <button onClick={onClose} style={closeButtonStyle}>
+        <div className="py-3 px-5 bg-white border-t border-border flex justify-between items-center">
+          <button onClick={onClose} className="w-10 h-10 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center cursor-pointer text-slate-500">
             <X size={20} />
           </button>
 
-          <div style={{ display: "flex", gap: "12px" }}>
+          <div className="flex gap-3">
             {step > 1 && (
               <button
                 onClick={() => setStep(step - 1)}
-                style={secondaryButtonStyle}
+                className="py-2.5 px-5 bg-white text-text-main rounded-xl border border-slate-200 font-bold text-sm flex items-center gap-1.5 cursor-pointer"
               >
                 <ChevronLeft size={20} /> Back
               </button>
@@ -767,13 +768,11 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
             <button
               onClick={handleSaveDraft}
               disabled={isSavingDraft}
-              style={{
-                ...secondaryButtonStyle,
-                borderColor: "var(--primary)",
-                color: "var(--primary)",
-                opacity: isSavingDraft ? 0.7 : 1,
-                cursor: isSavingDraft ? "not-allowed" : "pointer",
-              }}
+              className={cn(
+                "py-2.5 px-5 bg-white rounded-xl border font-bold text-sm flex items-center gap-1.5",
+                "border-primary text-primary",
+                isSavingDraft && "opacity-70 cursor-not-allowed"
+              )}
             >
               {isSavingDraft ? "Saving…" : "Save Progress"}
             </button>
@@ -787,31 +786,13 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                   isProcessing ||
                   step3AnalysisComplete
                 }
-                style={
-                  step3AnalysisComplete
-                    ? {
-                        ...secondaryButtonStyle,
-                        borderColor: "#22c55e",
-                        color: "#16a34a",
-                        background: "#f0fdf4",
-                        cursor: "not-allowed",
-                      }
-                    : isAnalyzing
-                      ? {
-                          ...secondaryButtonStyle,
-                          borderColor: "var(--primary)",
-                          color: "var(--primary)",
-                          cursor: "not-allowed",
-                        }
-                      : (formData.photos || []).length < 1 || isProcessing
-                        ? { ...disabledButtonStyle }
-                        : {
-                            ...secondaryButtonStyle,
-                            borderColor: "var(--primary)",
-                            color: "var(--primary)",
-                            fontWeight: "800",
-                          }
-                }
+                className={cn(
+                  "py-2.5 px-5 rounded-xl border font-bold text-sm flex items-center gap-1.5",
+                  step3AnalysisComplete && "border-green-600 text-green-600 bg-green-50 cursor-not-allowed",
+                  isAnalyzing && !step3AnalysisComplete && "border-primary text-primary bg-white cursor-not-allowed",
+                  ((formData.photos || []).length < 1 || isProcessing) && !step3AnalysisComplete && !isAnalyzing && "bg-slate-300 border-slate-300 text-white cursor-not-allowed opacity-60 shadow-none",
+                  !step3AnalysisComplete && !isAnalyzing && (formData.photos || []).length >= 1 && !isProcessing && "border-primary text-primary font-extrabold bg-white"
+                )}
               >
                 {isAnalyzing ? (
                   <>
@@ -844,9 +825,12 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                   setStep(step + 1);
                 }
               }}
-              style={
-                isNextDisabled() ? disabledButtonStyle : primaryButtonStyle
-              }
+              className={cn(
+                "py-2.5 px-5 rounded-xl border-none font-bold text-sm flex items-center gap-1.5 transition-all",
+                isNextDisabled()
+                  ? "bg-slate-300 text-white cursor-not-allowed opacity-60 shadow-none"
+                  : "bg-primary text-white cursor-pointer shadow-[0_4px_12px_rgba(99,102,241,0.3)]"
+              )}
             >
               {step === 9
                 ? "Complete Assessment"
@@ -858,20 +842,6 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
           </div>
         </div>
       </motion.div>
-
-      <style>{`
-                :root {
-                    --primary: #6366f1;
-                    --primary-light: #eef2ff;
-                    --border: #f1f5f9;
-                    --text-main: #1e293b;
-                    --text-dim: #64748b;
-                    --bg-surface: #f8fafc;
-                }
-                .animate-spin { animation: spin 1s linear infinite; }
-                @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-                @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-            `}</style>
     </div>
   );
 
@@ -932,97 +902,6 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
     onComplete(completedCase);
     onClose();
   }
-};
-
-const overlayStyle: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(15, 23, 42, 0.4)",
-  backdropFilter: "blur(8px)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "16px",
-  zIndex: 1000,
-};
-
-const modalStyle: React.CSSProperties = {
-  width: "100%",
-  maxWidth: "780px",
-  height: "85vh",
-  background: "rgba(255, 255, 255, 0.95)",
-  borderRadius: "20px",
-  display: "flex",
-  flexDirection: "column",
-  overflow: "hidden",
-  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-  border: "1px solid rgba(255,255,255,0.7)",
-};
-
-const contentStyle: React.CSSProperties = {
-  flex: 1,
-  overflowY: "auto",
-  padding: "0 16px",
-};
-
-const footerStyle: React.CSSProperties = {
-  padding: "12px 20px",
-  background: "#fff",
-  borderTop: "1px solid var(--border)",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-};
-
-const primaryButtonStyle: React.CSSProperties = {
-  padding: "10px 20px",
-  background: "var(--primary)",
-  color: "#fff",
-  borderRadius: "12px",
-  border: "none",
-  fontWeight: "700",
-  fontSize: "14px",
-  display: "flex",
-  alignItems: "center",
-  gap: "6px",
-  cursor: "pointer",
-  transition: "all 0.2s",
-  boxShadow: "0 4px 12px rgba(99, 102, 241, 0.3)",
-};
-
-const secondaryButtonStyle: React.CSSProperties = {
-  padding: "10px 20px",
-  background: "#fff",
-  color: "var(--text-main)",
-  borderRadius: "12px",
-  border: "1px solid #e2e8f0",
-  fontWeight: "700",
-  fontSize: "14px",
-  display: "flex",
-  alignItems: "center",
-  gap: "6px",
-  cursor: "pointer",
-};
-
-const closeButtonStyle: React.CSSProperties = {
-  width: "40px",
-  height: "40px",
-  background: "#f8fafc",
-  borderRadius: "12px",
-  border: "1px solid #e2e8f0",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  cursor: "pointer",
-  color: "#64748b",
-};
-
-const disabledButtonStyle: React.CSSProperties = {
-  ...primaryButtonStyle,
-  background: "#cbd5e1",
-  boxShadow: "none",
-  cursor: "not-allowed",
-  opacity: 0.6,
 };
 
 export default AssessmentWizard;

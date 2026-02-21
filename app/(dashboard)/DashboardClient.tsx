@@ -75,7 +75,7 @@ export default function DashboardClient({ initialCases, user }: DashboardClientP
                 onOpenWizard={handleOpenWizard}
                 onSearch={setSearchTerm}
             />
-            <main style={{ minHeight: 'calc(100vh - 80px)' }}>
+            <main className="min-h-[calc(100vh-80px)]">
                 <Dashboard
                     user={user}
                     cases={cases}
@@ -83,7 +83,7 @@ export default function DashboardClient({ initialCases, user }: DashboardClientP
                     searchTerm={searchTerm}
                 />
             </main>
-            
+
             <AssessmentWizard
                 isOpen={isWizardOpen}
                 onClose={() => {

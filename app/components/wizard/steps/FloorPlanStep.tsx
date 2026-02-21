@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Upload, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { WizardStepProps } from '../types';
+import { cn } from '@/lib/utils/cn';
 
 const FloorPlanStep: React.FC<WizardStepProps> = ({
     formData,
@@ -21,12 +22,12 @@ const FloorPlanStep: React.FC<WizardStepProps> = ({
     // Color mapping for annotation types
     const getTypeColor = (type: string) => {
         switch (type) {
-            case 'door': return { border: '#22c55e', bg: 'rgba(34, 197, 94, 0.2)', text: '#15803d' }; // Green
-            case 'stairs': return { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.2)', text: '#b45309' }; // Amber
-            case 'ramp': return { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.2)', text: '#1d4ed8' }; // Blue
-            case 'lift': return { border: '#a855f7', bg: 'rgba(168, 85, 247, 0.2)', text: '#7e22ce' }; // Purple
-            case 'second_exit': return { border: '#ef4444', bg: 'rgba(239, 68, 68, 0.2)', text: '#b91c1c' }; // Red
-            default: return { border: '#64748b', bg: 'rgba(100, 116, 139, 0.2)', text: '#334155' }; // Slate
+            case 'door': return { border: '#22c55e', bg: 'rgba(34, 197, 94, 0.2)', text: '#15803d' };
+            case 'stairs': return { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.2)', text: '#b45309' };
+            case 'ramp': return { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.2)', text: '#1d4ed8' };
+            case 'lift': return { border: '#a855f7', bg: 'rgba(168, 85, 247, 0.2)', text: '#7e22ce' };
+            case 'second_exit': return { border: '#ef4444', bg: 'rgba(239, 68, 68, 0.2)', text: '#b91c1c' };
+            default: return { border: '#64748b', bg: 'rgba(100, 116, 139, 0.2)', text: '#334155' };
         }
     };
 
@@ -35,32 +36,23 @@ const FloorPlanStep: React.FC<WizardStepProps> = ({
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
-            style={{ padding: '16px', textAlign: 'center' }}
+            className="p-4 text-center"
         >
-            <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--primary)', marginBottom: '2px' }}>Floor Plan Analysis</h3>
-                <p style={{ color: 'var(--text-dim)', fontSize: '13px' }}>Upload a drawing to automate 80% of the accessibility assessment.</p>
+            <div className="mb-4">
+                <h3 className="text-xl font-extrabold text-primary mb-0.5">Floor Plan Analysis</h3>
+                <p className="text-text-dim text-[13px]">Upload a drawing to automate 80% of the accessibility assessment.</p>
             </div>
 
-            <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+            <div className="max-w-[600px] mx-auto">
                 <label
                     htmlFor="floorPlanUpload"
-                    style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: hasPlan ? '0' : '32px 20px',
-                        border: hasPlan ? 'none' : '2px dashed',
-                        borderColor: isAnalyzing ? 'var(--primary)' : '#cbd5e1',
-                        background: isAnalyzing ? 'var(--primary-light)' : hasPlan ? '#fff' : '#f8fafc',
-                        borderRadius: '20px',
-                        cursor: isAnalyzing ? 'wait' : 'pointer',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        minHeight: hasPlan ? 'auto' : '200px'
-                    }}
+                    className={cn(
+                        "flex flex-col items-center justify-center border-2 border-dashed rounded-[20px] cursor-pointer transition-all relative overflow-hidden min-h-[200px]",
+                        hasPlan ? "p-0 border-none" : "py-8 px-5",
+                        isAnalyzing && "border-primary bg-primary-light cursor-wait",
+                        hasPlan && !isAnalyzing && "bg-white",
+                        !hasPlan && !isAnalyzing && "bg-slate-50 border-slate-300"
+                    )}
                 >
                     <input
                         type="file"
@@ -78,113 +70,85 @@ const FloorPlanStep: React.FC<WizardStepProps> = ({
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -10 }}
-                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '40px' }}
+                                className="flex flex-col items-center gap-3 py-10"
                             >
-                                <Loader2 className="animate-spin" size={40} color="var(--primary)" />
-                                <span style={{ fontWeight: '700', color: 'var(--primary)', fontSize: '14px' }}>AI is scanning floor plan...</span>
+                                <Loader2 className="animate-spin text-primary" size={40} />
+                                <span className="font-bold text-primary text-sm">AI is scanning floor plan...</span>
                             </motion.div>
                         ) : hasPlan && planUrl ? (
                             <motion.div
                                 key="done"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                style={{ width: '100%', position: 'relative' }}
+                                className="w-full relative"
                             >
-                                {/* Image Container */}
-                                <div style={{ position: 'relative', width: '100%', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                                    <img 
-                                        src={planUrl} 
-                                        alt="Floor Plan" 
-                                        style={{ width: '100%', height: 'auto', display: 'block' }} 
+                                <div className="relative w-full rounded-2xl overflow-hidden border border-slate-200">
+                                    <img
+                                        src={planUrl}
+                                        alt="Floor Plan"
+                                        className="w-full h-auto block"
                                     />
-                                    
-                                    {/* Overlays */}
                                     {floorPlanAnalysis?.annotations?.map((ann, idx) => {
                                         const [ymin, xmin, ymax, xmax] = ann.bbox;
                                         const style = getTypeColor(ann.type);
                                         return (
                                             <div
                                                 key={idx}
+                                                className="absolute rounded pointer-events-none"
                                                 style={{
-                                                    position: 'absolute',
                                                     top: `${(ymin / 1000) * 100}%`,
                                                     left: `${(xmin / 1000) * 100}%`,
                                                     height: `${((ymax - ymin) / 1000) * 100}%`,
                                                     width: `${((xmax - xmin) / 1000) * 100}%`,
                                                     border: `2px solid ${style.border}`,
                                                     backgroundColor: style.bg,
-                                                    borderRadius: '4px',
-                                                    pointerEvents: 'none'
                                                 }}
                                             >
                                                 {ann.label && (
-                                                    <span style={{
-                                                        position: 'absolute',
-                                                        top: '-20px',
-                                                        left: '0',
-                                                        background: style.border,
-                                                        color: '#fff',
-                                                        fontSize: '10px',
-                                                        fontWeight: '700',
-                                                        padding: '2px 6px',
-                                                        borderRadius: '4px',
-                                                        whiteSpace: 'nowrap',
-                                                        zIndex: 10
-                                                    }}>
+                                                    <span
+                                                        className="absolute -top-5 left-0 text-white text-[10px] font-bold py-0.5 px-1.5 rounded z-10 whitespace-nowrap"
+                                                        style={{ background: style.border }}
+                                                    >
                                                         {ann.label}
                                                     </span>
                                                 )}
                                             </div>
                                         );
                                     })}
-                                    
-                                    {/* Replace Overlay on Hover */}
-                                    <div style={{
-                                        position: 'absolute',
-                                        inset: 0,
-                                        background: 'rgba(0,0,0,0.4)',
-                                        opacity: 0,
-                                        transition: 'opacity 0.2s',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: '#fff',
-                                        fontWeight: '700',
-                                        className: 'hover:opacity-100' // Note: inline styles used mostly, handling hover via CSS class or state would be cleaner but complex here. 
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+                                    <div
+                                        className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold"
+                                        onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                                        onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.6)', padding: '8px 16px', borderRadius: '20px' }}>
+                                        <div className="flex items-center gap-2 bg-black/60 py-2 px-4 rounded-full">
                                             <Upload size={16} />
                                             <span>Click to Replace</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Analysis Summary / Legend */}
                                 {floorPlanAnalysis && (
-                                    <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+                                    <div className="mt-4 flex flex-wrap gap-2 justify-center">
                                         {floorPlanAnalysis.entrance_level && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }} />
-                                                <span style={{ fontSize: '12px', fontWeight: '600', color: '#166534' }}>
+                                            <div className="flex items-center gap-1.5 py-1.5 px-3 bg-green-50 rounded-lg border border-green-200">
+                                                <div className="w-2 h-2 rounded-full bg-green-600" />
+                                                <span className="text-xs font-semibold text-green-800">
                                                     {floorPlanAnalysis.entrance_level.value} Level
                                                 </span>
                                             </div>
                                         )}
                                         {floorPlanAnalysis.lift?.detected && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: '#f3e8ff', borderRadius: '8px', border: '1px solid #d8b4fe' }}>
-                                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#a855f7' }} />
-                                                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6b21a8' }}>
+                                            <div className="flex items-center gap-1.5 py-1.5 px-3 bg-purple-50 rounded-lg border border-purple-200">
+                                                <div className="w-2 h-2 rounded-full bg-purple-500" />
+                                                <span className="text-xs font-semibold text-purple-900">
                                                     Lift Detected
                                                 </span>
                                             </div>
                                         )}
                                         {floorPlanAnalysis.annotations?.some(a => a.type === 'stairs') && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: '#fff7ed', borderRadius: '8px', border: '1px solid #fed7aa' }}>
-                                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }} />
-                                                <span style={{ fontSize: '12px', fontWeight: '600', color: '#9a3412' }}>
+                                            <div className="flex items-center gap-1.5 py-1.5 px-3 bg-orange-50 rounded-lg border border-orange-200">
+                                                <div className="w-2 h-2 rounded-full bg-amber-500" />
+                                                <span className="text-xs font-semibold text-orange-800">
                                                     Stairs Found
                                                 </span>
                                             </div>
@@ -197,14 +161,14 @@ const FloorPlanStep: React.FC<WizardStepProps> = ({
                                 key="idle"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}
+                                className="flex flex-col items-center gap-3"
                             >
-                                <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                                <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center text-slate-500 shadow-md">
                                     <Upload size={24} />
                                 </div>
-                                <div style={{ textAlign: 'center' }}>
-                                    <span style={{ display: 'block', fontWeight: '800', color: '#1e293b', fontSize: '15px' }}>Click to Upload Plan</span>
-                                    <span style={{ fontSize: '12px', color: '#64748b' }}>PNG, JPG or PDF (Max 10MB)</span>
+                                <div className="text-center">
+                                    <span className="block font-extrabold text-slate-800 text-[15px]">Click to Upload Plan</span>
+                                    <span className="text-xs text-slate-500">PNG, JPG or PDF (Max 10MB)</span>
                                 </div>
                             </motion.div>
                         )}
@@ -215,46 +179,38 @@ const FloorPlanStep: React.FC<WizardStepProps> = ({
                             initial={{ width: 0 }}
                             animate={{ width: '100%' }}
                             transition={{ duration: 2, repeat: Infinity }}
-                            style={{ position: 'absolute', bottom: 0, left: 0, height: '4px', background: 'var(--primary)' }}
+                            className="absolute bottom-0 left-0 h-1 bg-primary"
                         />
                     )}
                 </label>
 
                 <div
                     onClick={() => handleUpdateField('hasNoFloorPlan', !formData.hasNoFloorPlan)}
-                    style={{
-                        marginTop: '12px',
-                        padding: '10px 14px',
-                        background: formData.hasNoFloorPlan ? 'var(--primary-light)' : '#fff',
-                        borderRadius: '12px',
-                        border: '1px solid',
-                        borderColor: formData.hasNoFloorPlan ? 'var(--primary)' : '#e2e8f0',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        transition: 'all 0.2s'
-                    }}
+                    className={cn(
+                        "mt-3 py-2.5 px-3.5 rounded-xl cursor-pointer flex items-center gap-2.5 transition-all border",
+                        formData.hasNoFloorPlan ? "bg-primary-light border-primary" : "bg-white border-slate-200"
+                    )}
                 >
-                    <div style={{
-                        width: '18px', height: '18px', borderRadius: '4px', border: '2px solid',
-                        borderColor: formData.hasNoFloorPlan ? 'var(--primary)' : '#cbd5e1',
-                        background: formData.hasNoFloorPlan ? 'var(--primary)' : 'transparent',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff'
-                    }}>
+                    <div className={cn(
+                        "w-[18px] h-[18px] rounded border-2 flex items-center justify-center text-white shrink-0",
+                        formData.hasNoFloorPlan ? "border-primary bg-primary" : "border-slate-300 bg-transparent"
+                    )}>
                         {formData.hasNoFloorPlan && <CheckCircle size={12} />}
                     </div>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: formData.hasNoFloorPlan ? 'var(--primary)' : '#475569' }}>
-                        I don't have a floor plan (Estimate from photos)
+                    <span className={cn(
+                        "text-[13px] font-bold",
+                        formData.hasNoFloorPlan ? "text-primary" : "text-slate-600"
+                    )}>
+                        I don&apos;t have a floor plan (Estimate from photos)
                     </span>
                 </div>
             </div>
 
-            <div style={{ marginTop: '24px', padding: '16px', background: '#f8fafc', borderRadius: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px', textAlign: 'left' }}>
-                <AlertCircle size={18} color="var(--primary)" style={{ marginTop: '2px' }} />
+            <div className="mt-6 p-4 bg-slate-50 rounded-2xl flex items-start gap-3 text-left">
+                <AlertCircle size={18} className="text-primary mt-0.5 shrink-0" />
                 <div>
-                    <span style={{ display: 'block', fontWeight: '800', fontSize: '13px', color: '#1e293b', marginBottom: '2px' }}>Pro Tip</span>
-                    <p style={{ fontSize: '12px', color: '#64748b', lineHeight: '1.4' }}>
+                    <span className="block font-extrabold text-[13px] text-slate-800 mb-0.5">Pro Tip</span>
+                    <p className="text-xs text-slate-500 leading-snug">
                         A clear, top-down drawing helps our engine detect door widths, stair counts, and dimensions with millimeter precision.
                     </p>
                 </div>

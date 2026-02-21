@@ -1,9 +1,10 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShieldAlert, ShieldCheck, AlertOctagon, Undo2 } from 'lucide-react';
+import { ShieldAlert, Undo2, Info } from 'lucide-react';
 import { WizardStepProps } from '../types';
 import { AIConfirmationCard } from '../AIConfirmationCard';
+import { cn } from '@/lib/utils/cn';
 
 const SafetyHazardsStep: React.FC<WizardStepProps> = ({
     formData,
@@ -16,7 +17,6 @@ const SafetyHazardsStep: React.FC<WizardStepProps> = ({
     if (aiSuggestions?.suggested_hazards) {
         aiSuggestions.suggested_hazards.split(',').forEach((h: string) => aiHazards.push(h.trim()));
     }
-    // Check specific fields
     if (aiSuggestions?.obstructions && aiSuggestions.obstructions !== 'None') {
         aiHazards.push(`Obstruction: ${aiSuggestions.obstructions}`);
     }
@@ -29,14 +29,14 @@ const SafetyHazardsStep: React.FC<WizardStepProps> = ({
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}
+            className="p-6 flex flex-col gap-5"
         >
-            <div style={{ marginBottom: '4px' }}>
-                <h3 style={{ fontSize: '22px', fontWeight: '800', color: 'var(--primary)', marginBottom: '4px' }}>Safety & Hazards</h3>
-                <p style={{ color: 'var(--text-dim)', fontSize: '14px' }}>Identify potential risks and compliance issues detected by AI.</p>
+            <div className="mb-1">
+                <h3 className="text-[22px] font-extrabold text-primary mb-1">Safety & Hazards</h3>
+                <p className="text-text-dim text-sm">Identify potential risks and compliance issues detected by AI.</p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div className="flex flex-col gap-6">
                 {/* Second Exit Confirmation */}
                 <AIConfirmationCard
                     label="Emergency Exit (Second Exit)"
@@ -55,58 +55,44 @@ const SafetyHazardsStep: React.FC<WizardStepProps> = ({
 
                 {/* Exit Location (Conditional) */}
                 {formData.secondExit === 'Yes' && (
-                    <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                        <label style={subLabelStyle}>Where does the second exit lead?</label>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200">
+                        <label className="block text-[11px] font-extrabold text-slate-500 mb-3 uppercase tracking-wider">Where does the second exit lead?</label>
+                        <div className="grid grid-cols-2 gap-3">
                             {['Public Way / Street', 'Enclosed Garden'].map(loc => (
                                 <button
                                     key={loc}
                                     onClick={() => handleUpdateField('secondExitLocation', loc)}
-                                    style={{
-                                        padding: '12px', borderRadius: '12px', border: '1px solid',
-                                        borderColor: formData.secondExitLocation === loc ? 'var(--primary)' : '#cbd5e1',
-                                        background: formData.secondExitLocation === loc ? 'var(--primary-light)' : '#fff',
-                                        color: formData.secondExitLocation === loc ? 'var(--primary)' : '#64748b',
-                                        fontWeight: '700', fontSize: '13px', cursor: 'pointer'
-                                    }}
+                                    className={cn(
+                                        "py-3 px-4 rounded-xl border font-bold text-[13px] cursor-pointer transition-all",
+                                        formData.secondExitLocation === loc
+                                            ? "border-primary bg-primary-light text-primary"
+                                            : "border-slate-300 bg-white text-slate-500"
+                                    )}
                                 >
                                     {loc}
                                 </button>
                             ))}
                         </div>
-                        <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '10px' }}>
-                            <InfoIcon size={12} style={{ display: 'inline', marginRight: '4px' }} />
-                            A "Safe Exit" must lead directly to a public way.
+                        <p className="text-xs text-slate-400 mt-2.5">
+                            <Info size={12} className="inline mr-1 align-middle" />
+                            A &quot;Safe Exit&quot; must lead directly to a public way.
                         </p>
                     </div>
                 )}
 
                 {/* Hazards Text Area */}
-                <div style={{
-                    background: '#fff',
-                    borderRadius: '24px',
-                    padding: '24px',
-                    border: '1px solid var(--border)',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '16px'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <ShieldAlert size={20} color="#ef4444" />
-                        <h4 style={{ fontSize: '16px', fontWeight: '800', color: '#1e293b' }}>Known Hazards</h4>
+                <div className="bg-white rounded-3xl p-6 border border-border shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-4">
+                    <div className="flex items-center gap-3">
+                        <ShieldAlert size={20} className="text-red-500" />
+                        <h4 className="text-base font-extrabold text-slate-800">Known Hazards</h4>
                     </div>
                     <textarea
                         placeholder="e.g. Loose carpet on stairs, trailing wires in hallway, dim lighting in bathroom..."
                         value={formData.hazards || ''}
                         onChange={(e) => handleUpdateField('hazards', e.target.value)}
-                        style={{
-                            width: '100%', minHeight: '120px', padding: '16px', borderRadius: '16px',
-                            border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '14px',
-                            outline: 'none', resize: 'vertical', lineHeight: '1.5'
-                        }}
+                        className="w-full min-h-[120px] p-4 rounded-2xl border border-slate-200 bg-slate-50 text-sm outline-none resize-y leading-relaxed"
                     />
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <div className="flex gap-2 flex-wrap">
                         {['Trip Hazards', 'Poor Lighting', 'Damp/Mould'].map(tag => (
                             <button
                                 key={tag}
@@ -114,12 +100,11 @@ const SafetyHazardsStep: React.FC<WizardStepProps> = ({
                                     const current = formData.hazards || '';
                                     if (!current.includes(tag)) handleUpdateField('hazards', current ? `${current}, ${tag}` : tag);
                                 }}
-                                style={{ padding: '4px 10px', borderRadius: '8px', background: '#f1f5f9', border: 'none', fontSize: '11px', fontWeight: '700', color: '#64748b', cursor: 'pointer' }}
+                                className="py-1 px-2.5 rounded-lg bg-slate-100 border-none text-[11px] font-bold text-slate-500 cursor-pointer"
                             >
                                 + {tag}
                             </button>
                         ))}
-                        {/* AI Suggested Hazards */}
                         {aiHazards.map((tag, idx) => (
                             <button
                                 key={`ai-${idx}`}
@@ -127,19 +112,7 @@ const SafetyHazardsStep: React.FC<WizardStepProps> = ({
                                     const current = formData.hazards || '';
                                     if (!current.includes(tag)) handleUpdateField('hazards', current ? `${current}, ${tag}` : tag);
                                 }}
-                                style={{ 
-                                    padding: '4px 10px', 
-                                    borderRadius: '8px', 
-                                    background: '#ecfdf5', 
-                                    border: '1px solid #a7f3d0', 
-                                    fontSize: '11px', 
-                                    fontWeight: '700', 
-                                    color: '#059669', 
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px'
-                                }}
+                                className="py-1 px-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-emerald-600 cursor-pointer flex items-center gap-1"
                             >
                                 <ShieldAlert size={10} /> AI: {tag}
                             </button>
@@ -149,22 +122,6 @@ const SafetyHazardsStep: React.FC<WizardStepProps> = ({
             </div>
         </motion.div>
     );
-};
-
-const InfoIcon = ({ size, style }: { size: number, style?: React.CSSProperties }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
-        <circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />
-    </svg>
-);
-
-const subLabelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: '11px',
-    fontWeight: '800',
-    color: '#64748b',
-    marginBottom: '12px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px'
 };
 
 export default SafetyHazardsStep;

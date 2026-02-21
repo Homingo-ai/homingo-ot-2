@@ -16,63 +16,54 @@ const FacilitiesStep: React.FC<WizardStepProps> = ({
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}
+            className="p-4 flex flex-col gap-3"
         >
-            <div style={{ marginBottom: '0px' }}>
-                <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--primary)', marginBottom: '2px' }}>Facilities & Rooms</h3>
-                <p style={{ color: 'var(--text-dim)', fontSize: '13px' }}>Verify layout of kitchens and bathrooms.</p>
+            <div className="mb-0">
+                <h3 className="text-xl font-extrabold text-primary mb-0.5">Facilities & Rooms</h3>
+                <p className="text-text-dim text-[13px]">Verify layout of kitchens and bathrooms.</p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="flex flex-col gap-3">
                 {/* AI-First Bedroom Detection (Special Case with Number Input) */}
-                <div style={{
-                    background: '#fff',
-                    borderRadius: '20px',
-                    padding: '16px',
-                    border: '1px solid var(--border)',
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.02)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px'
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="bg-white rounded-[20px] p-4 border border-border shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col gap-3">
+                    <div className="flex justify-between items-start">
+                        <div className="flex gap-3">
+                            <div className="w-9 h-9 rounded-[10px] bg-primary-light text-primary flex items-center justify-center">
                                 <Bed size={18} />
                             </div>
                             <div>
-                                <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', marginBottom: '2px' }}>Accommodation</h4>
-                                <p style={{ fontSize: '12px', color: '#64748b' }}>Total bedrooms and occupancy limits.</p>
+                                <h4 className="text-[15px] font-extrabold text-slate-800 mb-0.5">Accommodation</h4>
+                                <p className="text-xs text-slate-500">Total bedrooms and occupancy limits.</p>
                             </div>
                         </div>
                         {floorPlanAnalysis && (
-                            <div style={{ padding: '4px 12px', borderRadius: '20px', background: '#dcfce7', color: '#166534', fontSize: '11px', fontWeight: '800' }}>
+                            <div className="py-1 px-3 rounded-full bg-green-100 text-green-800 text-[11px] font-extrabold">
                                 AI Detection Active
                             </div>
                         )}
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <Bed size={16} color="#64748b" />
-                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#475569' }}>Bedrooms</span>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-slate-50 p-3 rounded-xl flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <Bed size={16} className="text-slate-500" />
+                                <span className="text-[13px] font-bold text-slate-600">Bedrooms</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <button onClick={() => handleUpdateField('bedrooms', Math.max(0, (formData.bedrooms || 0) - 1))} style={counterButtonStyle}>-</button>
-                                <span style={{ fontSize: '16px', fontWeight: '800', color: 'var(--primary)', minWidth: '20px', textAlign: 'center' }}>{formData.bedrooms || 0}</span>
-                                <button onClick={() => handleUpdateField('bedrooms', (formData.bedrooms || 0) + 1)} style={counterButtonStyle}>+</button>
+                            <div className="flex items-center gap-2.5">
+                                <button onClick={() => handleUpdateField('bedrooms', Math.max(0, (formData.bedrooms || 0) - 1))} className="w-7 h-7 rounded-md border border-slate-300 bg-white cursor-pointer flex items-center justify-center text-lg font-bold text-slate-500 transition-all hover:bg-slate-100">-</button>
+                                <span className="text-base font-extrabold text-primary min-w-5 text-center">{formData.bedrooms || 0}</span>
+                                <button onClick={() => handleUpdateField('bedrooms', (formData.bedrooms || 0) + 1)} className="w-7 h-7 rounded-md border border-slate-300 bg-white cursor-pointer flex items-center justify-center text-lg font-bold text-slate-500 transition-all hover:bg-slate-100">+</button>
                             </div>
                         </div>
-                        <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <Users size={16} color="#64748b" />
-                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#475569' }}>Occupants</span>
+                        <div className="bg-slate-50 p-3 rounded-xl flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <Users size={16} className="text-slate-500" />
+                                <span className="text-[13px] font-bold text-slate-600">Occupants</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <button onClick={() => handleUpdateField('bedSpaces', Math.max(1, (formData.bedSpaces || 1) - 1))} style={counterButtonStyle}>-</button>
-                                <span style={{ fontSize: '16px', fontWeight: '800', color: 'var(--primary)', minWidth: '20px', textAlign: 'center' }}>{formData.bedSpaces || 1}</span>
-                                <button onClick={() => handleUpdateField('bedSpaces', (formData.bedSpaces || 1) + 1)} style={counterButtonStyle}>+</button>
+                            <div className="flex items-center gap-2.5">
+                                <button onClick={() => handleUpdateField('bedSpaces', Math.max(1, (formData.bedSpaces || 1) - 1))} className="w-7 h-7 rounded-md border border-slate-300 bg-white cursor-pointer flex items-center justify-center text-lg font-bold text-slate-500 transition-all hover:bg-slate-100">-</button>
+                                <span className="text-base font-extrabold text-primary min-w-5 text-center">{formData.bedSpaces || 1}</span>
+                                <button onClick={() => handleUpdateField('bedSpaces', (formData.bedSpaces || 1) + 1)} className="w-7 h-7 rounded-md border border-slate-300 bg-white cursor-pointer flex items-center justify-center text-lg font-bold text-slate-500 transition-all hover:bg-slate-100">+</button>
                             </div>
                         </div>
                     </div>
@@ -110,22 +101,6 @@ const FacilitiesStep: React.FC<WizardStepProps> = ({
             </div>
         </motion.div>
     );
-};
-
-const counterButtonStyle: React.CSSProperties = {
-    width: '28px',
-    height: '28px',
-    borderRadius: '6px',
-    border: '1px solid #cbd5e1',
-    background: '#fff',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '18px',
-    fontWeight: '700',
-    color: '#64748b',
-    transition: 'all 0.2s'
 };
 
 export default FacilitiesStep;

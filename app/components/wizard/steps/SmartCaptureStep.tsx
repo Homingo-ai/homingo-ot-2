@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Image as ImageIcon, Trash2, CheckCircle, Info, Plus, RefreshCw } from 'lucide-react';
+import { Camera, Trash2, CheckCircle, RefreshCw } from 'lucide-react';
 import { WizardStepProps } from '../types';
+import { cn } from '@/lib/utils/cn';
 
 const CAPTURE_CATEGORIES = [
     { id: 'entrance', title: 'Main Entrance', desc: 'Door and structural steps.', required: true },
@@ -35,11 +36,9 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
         const updatedCategoryPhotos = { ...categoryPhotos, [catId]: currentCatPhotos };
         handleUpdateField('categoryPhotos', updatedCategoryPhotos);
 
-        // Keep global photos list in sync
         const allCategorizedPhotos = Object.values(updatedCategoryPhotos).flat();
         handleUpdateField('photos', allCategorizedPhotos);
 
-        // Clear validation error and reset analysis state so Analyze is required again
         onClearValidationError?.(catId);
         onPhotosChanged?.();
     };
@@ -49,7 +48,7 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
             initial={{ opacity: 0, scale: 0.99 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.99 }}
-            style={{ padding: '20px', position: 'relative' }}
+            className="p-5 relative"
         >
             <AnimatePresence>
                 {isAnalyzing && (
@@ -59,98 +58,52 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.25 }}
-                        style={{
-                            position: 'absolute',
-                            inset: 0,
-                            background: 'rgba(99, 102, 241, 0.08)',
-                            backdropFilter: 'blur(2px)',
-                            borderRadius: '16px',
-                            zIndex: 20,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '16px',
-                            pointerEvents: 'all',
-                        }}
+                        className="absolute inset-0 bg-primary/10 backdrop-blur-[2px] rounded-2xl z-20 flex flex-col items-center justify-center gap-4 pointer-events-all"
                     >
-                        <div style={{
-                            background: '#fff',
-                            borderRadius: '20px',
-                            padding: '28px 36px',
-                            boxShadow: '0 8px 32px rgba(99, 102, 241, 0.18)',
-                            border: '1px solid rgba(99, 102, 241, 0.15)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '14px',
-                            minWidth: '220px',
-                        }}>
-                            <div style={{ position: 'relative', width: '48px', height: '48px' }}>
-                                <div style={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    borderRadius: '50%',
-                                    border: '3px solid #eef2ff',
-                                }} />
-                                <div style={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    borderRadius: '50%',
-                                    border: '3px solid transparent',
-                                    borderTopColor: '#6366f1',
-                                    animation: 'spin 0.8s linear infinite',
-                                }} />
-                                <div style={{
-                                    position: 'absolute',
-                                    inset: '10px',
-                                    borderRadius: '50%',
-                                    background: '#eef2ff',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}>
-                                    <Camera size={14} color="#6366f1" />
+                        <div className="bg-white rounded-[20px] py-7 px-9 shadow-[0_8px_32px_rgba(99,102,241,0.18)] border border-primary/15 flex flex-col items-center gap-3.5 min-w-[220px]">
+                            <div className="relative w-12 h-12">
+                                <div className="absolute inset-0 rounded-full border-[3px] border-primary-light" />
+                                <div className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-primary animate-spin" style={{ animationDuration: '0.8s' }} />
+                                <div className="absolute inset-2.5 rounded-full bg-primary-light flex items-center justify-center">
+                                    <Camera size={14} className="text-primary" />
                                 </div>
                             </div>
-                            <div style={{ textAlign: 'center' }}>
-                                <p style={{ fontWeight: '800', fontSize: '15px', color: '#6366f1', marginBottom: '4px' }}>
+                            <div className="text-center">
+                                <p className="font-extrabold text-[15px] text-primary mb-1">
                                     Analysing Photos
                                 </p>
-                                <p style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '500' }}>
+                                <p className="text-xs text-slate-400 font-medium">
                                     AI is verifying your evidence&hellip;
                                 </p>
                             </div>
-                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <div className="flex gap-1.5 items-center">
                                 {[0, 1, 2].map(i => (
-                                    <div key={i} style={{
-                                        width: '7px',
-                                        height: '7px',
-                                        borderRadius: '50%',
-                                        background: '#6366f1',
-                                        animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
-                                    }} />
+                                    <div
+                                        key={i}
+                                        className="w-[7px] h-[7px] rounded-full bg-primary animate-pulse"
+                                        style={{ animationDelay: `${i * 0.2}s` }}
+                                    />
                                 ))}
                             </div>
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
-            <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div className="mb-5">
+                <div className="flex justify-between items-start">
                     <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                            <div style={{ padding: '2px 8px', background: 'var(--primary)', color: '#fff', borderRadius: '4px', fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="py-0.5 px-2 bg-primary text-white rounded text-[8px] font-black uppercase tracking-wider">
                                 Guided Evidence
                             </div>
                         </div>
-                        <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '2px', color: 'var(--primary)' }}>Smart Capture</h3>
-                        <p style={{ color: 'var(--text-dim)', fontSize: '13px' }}>
+                        <h3 className="text-xl font-extrabold mb-0.5 text-primary">Smart Capture</h3>
+                        <p className="text-text-dim text-[13px]">
                             Upload photos per category for millimetre-perfect AI verification.
                         </p>
                     </div>
                     {isProcessing && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'var(--primary-light)', borderRadius: '10px', color: 'var(--primary)', fontWeight: '700', fontSize: '12px' }}>
+                        <div className="flex items-center gap-1.5 py-1.5 px-3 bg-primary-light rounded-[10px] text-primary font-bold text-xs">
                             <RefreshCw className="animate-spin" size={14} />
                             Uploading...
                         </div>
@@ -158,7 +111,7 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4 mb-6">
                 {CAPTURE_CATEGORIES.map(cat => {
                     const currentPhotos = categoryPhotos[cat.id] || [];
                     const isFull = currentPhotos.length >= 3;
@@ -167,110 +120,87 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
 
                     const isUploadBlocked = isProcessing || isAnalyzing || analysisComplete;
 
-                    const cardBorder = analysisResult === 'valid'
-                        ? '2px solid #22c55e'
+                    const cardBorderClass = analysisResult === 'valid'
+                        ? 'border-2 border-green-500'
                         : analysisResult === 'invalid' || hasError
-                        ? '2px solid #facc15'
-                        : '1px solid var(--border)';
+                        ? 'border-2 border-amber-400'
+                        : 'border border-border';
+
+                    const cardShadowClass = analysisResult === 'valid'
+                        ? 'shadow-[0_2px_10px_rgba(34,197,94,0.08)]'
+                        : analysisResult === 'invalid'
+                        ? 'shadow-[0_2px_10px_rgba(250,204,21,0.1)]'
+                        : 'shadow-[0_2px_10px_rgba(0,0,0,0.02)]';
 
                     return (
-                        <div key={cat.id} style={{
-                            background: '#fff',
-                            borderRadius: '20px',
-                            padding: '16px',
-                            border: cardBorder,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '12px',
-                            transition: 'border 0.3s',
-                            boxShadow: analysisResult === 'valid'
-                                ? '0 2px 10px rgba(34,197,94,0.08)'
-                                : analysisResult === 'invalid'
-                                ? '0 2px 10px rgba(250,204,21,0.1)'
-                                : '0 2px 10px rgba(0,0,0,0.02)'
-                        }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div
+                            key={cat.id}
+                            className={cn(
+                                "bg-white rounded-[20px] p-4 flex flex-col gap-3 transition-colors",
+                                cardBorderClass,
+                                cardShadowClass
+                            )}
+                        >
+                            <div className="flex justify-between items-start">
                                 <div>
-                                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <h4 className="text-sm font-extrabold text-slate-800 mb-0.5 flex items-center gap-1">
                                         {cat.title}
-                                        {cat.required && <span style={{ color: '#ef4444', fontSize: '12px' }} title="Required">*</span>}
+                                        {cat.required && <span className="text-red-500 text-xs" title="Required">*</span>}
                                     </h4>
-                                    <p style={{ fontSize: '11px', color: '#64748b' }}>{cat.desc}</p>
+                                    <p className="text-[11px] text-slate-500">{cat.desc}</p>
                                     {hasError && (
-                                        <div style={{ 
-                                            marginTop: '4px', 
-                                            fontSize: '10px', 
-                                            color: '#ca8a04', 
-                                            fontWeight: '700' 
-                                        }}>
+                                        <div className="mt-1 text-[10px] text-amber-600 font-bold">
                                             ⚠️ Unrelated photo
                                         </div>
                                     )}
                                 </div>
                                 {analysisResult === 'valid' ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#16a34a', background: '#dcfce7', padding: '2px 7px', borderRadius: '6px' }}>
+                                    <div className="flex items-center gap-1 text-green-600 bg-green-100 py-0.5 px-1.5 rounded-md">
                                         <CheckCircle size={11} />
-                                        <span style={{ fontSize: '9px', fontWeight: '900', textTransform: 'uppercase' }}>Verified</span>
+                                        <span className="text-[9px] font-black uppercase">Verified</span>
                                     </div>
                                 ) : analysisResult === 'invalid' ? (
-                                    <span style={{ fontSize: '8px', fontWeight: '900', color: '#92400e', textTransform: 'uppercase', background: '#fef9c3', padding: '2px 6px', borderRadius: '4px' }}>⚠ Review</span>
+                                    <span className="text-[8px] font-black text-amber-800 uppercase bg-amber-100 py-0.5 px-1.5 rounded">⚠ Review</span>
                                 ) : (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <div className="flex items-center gap-1.5">
                                         {cat.required && currentPhotos.length === 0 && (
-                                            <span style={{ fontSize: '8px', fontWeight: '900', color: '#ef4444', textTransform: 'uppercase', background: '#fef2f2', padding: '2px 6px', borderRadius: '4px' }}>Required</span>
+                                            <span className="text-[8px] font-black text-red-500 uppercase bg-red-50 py-0.5 px-1.5 rounded">Required</span>
                                         )}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: currentPhotos.length > 0 ? '#22c55e' : '#94a3b8' }}>
+                                        <div className={cn(
+                                            "flex items-center gap-1",
+                                            currentPhotos.length > 0 ? "text-green-600" : "text-slate-400"
+                                        )}>
                                             {currentPhotos.length > 0 && <CheckCircle size={12} />}
-                                            <span style={{ fontSize: '10px', fontWeight: '800' }}>{currentPhotos.length}/3</span>
+                                            <span className="text-[10px] font-extrabold">{currentPhotos.length}/3</span>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                                {currentPhotos.map((photo: string, idx: number) => {
-                                    return (
-                                        <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                                            <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            <button
-                                                onClick={() => removePhoto(cat.id, idx)}
-                                                disabled={isAnalyzing || analysisComplete}
-                                                style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: (isAnalyzing || analysisComplete) ? 'not-allowed' : 'pointer', zIndex: 10 }}>
-                                                <Trash2 size={10} />
-                                            </button>
-                                        </div>
-                                    );
-                                })}
+                            <div className="grid grid-cols-3 gap-2">
+                                {currentPhotos.map((photo: string, idx: number) => (
+                                    <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200">
+                                        <img src={photo} alt="" className="w-full h-full object-cover" />
+                                        <button
+                                            onClick={() => removePhoto(cat.id, idx)}
+                                            disabled={isAnalyzing || analysisComplete}
+                                            className="absolute top-0.5 right-0.5 bg-black/50 border-none rounded-full w-[18px] h-[18px] flex items-center justify-center text-white z-10 disabled:cursor-not-allowed cursor-pointer"
+                                        >
+                                            <Trash2 size={10} />
+                                        </button>
+                                    </div>
+                                ))}
                                 {!isFull && (
-                                    <label style={{
-                                        position: 'relative',
-                                        aspectRatio: '1',
-                                        background: '#f8fafc',
-                                        borderRadius: '8px',
-                                        border: '1px dashed #cbd5e1',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        cursor: isUploadBlocked ? 'not-allowed' : 'pointer',
-                                        transition: 'all 0.2s',
-                                        gridColumn: currentPhotos.length === 0 ? 'span 3' : 'span 1',
-                                        height: currentPhotos.length === 0 ? '80px' : 'auto',
-                                        opacity: isUploadBlocked ? 0.7 : 1
-                                    }}
-                                        onMouseEnter={(e) => !isUploadBlocked && (e.currentTarget.style.borderColor = 'var(--primary)', e.currentTarget.style.background = 'var(--primary-light)')}
-                                        onMouseLeave={(e) => !isUploadBlocked && (e.currentTarget.style.borderColor = '#cbd5e1', e.currentTarget.style.background = '#f8fafc')}
+                                    <label
+                                        className={cn(
+                                            "relative aspect-square bg-slate-50 rounded-lg border border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer transition-all",
+                                            currentPhotos.length === 0 && "col-span-3 h-20",
+                                            isUploadBlocked && "opacity-70 cursor-not-allowed",
+                                            !isUploadBlocked && "hover:border-primary hover:bg-primary-light"
+                                        )}
                                     >
                                         {isUploadBlocked && (
-                                            <div style={{
-                                                position: 'absolute',
-                                                inset: 0,
-                                                background: 'rgba(148, 163, 184, 0.4)',
-                                                borderRadius: '8px',
-                                                zIndex: 10,
-                                                cursor: 'not-allowed',
-                                                pointerEvents: 'auto'
-                                            }} />
+                                            <div className="absolute inset-0 bg-slate-400/40 rounded-lg z-10 cursor-not-allowed pointer-events-auto" />
                                         )}
                                         <input
                                             type="file"
@@ -280,8 +210,8 @@ const SmartCaptureStep: React.FC<WizardStepProps> = ({
                                             multiple
                                             disabled={isUploadBlocked}
                                         />
-                                        <Camera size={currentPhotos.length === 0 ? 20 : 16} color="#94a3b8" />
-                                        {currentPhotos.length === 0 && <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginTop: '4px' }}>Add Photos</span>}
+                                        <Camera size={currentPhotos.length === 0 ? 20 : 16} className="text-slate-400" />
+                                        {currentPhotos.length === 0 && <span className="text-[11px] font-bold text-slate-500 mt-1">Add Photos</span>}
                                     </label>
                                 )}
                             </div>

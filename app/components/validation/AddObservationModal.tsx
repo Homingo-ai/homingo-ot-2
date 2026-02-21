@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, FileText, AlertCircle, Shield, Wrench, MessageSquare } from 'lucide-react';
+import { cn } from '@/lib/utils/cn';
 
 const OBSERVATION_CATEGORIES = [
     { id: 'accessibility', label: 'Accessibility Issue', icon: AlertCircle, color: '#dc2626' },
@@ -24,9 +25,7 @@ const AddObservationModal: React.FC<AddObservationModalProps> = ({ isOpen, onClo
     const [isSaving, setIsSaving] = useState(false);
 
     const handleSave = async () => {
-        if (!selectedCategory || !content.trim()) {
-            return;
-        }
+        if (!selectedCategory || !content.trim()) return;
 
         setIsSaving(true);
 
@@ -43,7 +42,6 @@ const AddObservationModal: React.FC<AddObservationModalProps> = ({ isOpen, onClo
 
         await onSave(observation);
 
-        // Reset form
         setSelectedCategory('');
         setContent('');
         setIncludeInReport(true);
@@ -53,94 +51,52 @@ const AddObservationModal: React.FC<AddObservationModalProps> = ({ isOpen, onClo
 
     if (!isOpen) return null;
 
+    const isDisabled = !selectedCategory || !content.trim();
+
     return (
-        <div style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px'
-        }}>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={onClose}
-                style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'rgba(0,0,0,0.5)',
-                    backdropFilter: 'blur(4px)'
-                }}
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             />
 
             <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                style={{
-                    width: '100%',
-                    maxWidth: '600px',
-                    background: '#fff',
-                    borderRadius: '20px',
-                    position: 'relative',
-                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-                    maxHeight: '90vh',
-                    display: 'flex',
-                    flexDirection: 'column'
-                }}
+                className="w-full max-w-[600px] bg-white rounded-[20px] relative shadow-2xl max-h-[90vh] flex flex-col"
             >
                 {/* Header */}
-                <div style={{
-                    padding: '24px 32px',
-                    borderBottom: '1px solid var(--border)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '12px',
-                            background: 'var(--primary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#fff'
-                        }}>
+                <div className="py-6 px-8 border-b border-border flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white">
                             <FileText size={20} />
                         </div>
                         <div>
-                            <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--primary)' }}>
+                            <h2 className="text-lg font-extrabold text-primary">
                                 Add Professional Observation
                             </h2>
-                            <p style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '2px' }}>
+                            <p className="text-xs text-text-dim mt-0.5">
                                 Clinical note for case {caseId}
                             </p>
                         </div>
                     </div>
-                    <button onClick={onClose} style={{ color: 'var(--text-dim)', cursor: 'pointer' }}>
+                    <button onClick={onClose} className="text-text-dim cursor-pointer">
                         <X size={24} />
                     </button>
                 </div>
 
                 {/* Content */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+                <div className="flex-1 overflow-y-auto p-8">
                     {/* Category Selection */}
-                    <div style={{ marginBottom: '24px' }}>
-                        <label style={{
-                            display: 'block',
-                            fontSize: '13px',
-                            fontWeight: '700',
-                            color: 'var(--text-main)',
-                            marginBottom: '12px'
-                        }}>
-                            Category <span style={{ color: '#dc2626' }}>*</span>
+                    <div className="mb-6">
+                        <label className="block text-[13px] font-bold text-text-main mb-3">
+                            Category <span className="text-red-600">*</span>
                         </label>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                        <div className="grid grid-cols-2 gap-3">
                             {OBSERVATION_CATEGORIES.map(cat => {
                                 const Icon = cat.icon;
                                 const isSelected = selectedCategory === cat.id;
@@ -150,35 +106,31 @@ const AddObservationModal: React.FC<AddObservationModalProps> = ({ isOpen, onClo
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => setSelectedCategory(cat.id)}
+                                        className={cn(
+                                            "p-4 rounded-xl border-2 cursor-pointer flex items-center gap-3 transition-all",
+                                            isSelected ? "border-[var(--border)]" : "border-border"
+                                        )}
                                         style={{
-                                            padding: '16px',
-                                            borderRadius: '12px',
-                                            border: `2px solid ${isSelected ? cat.color : 'var(--border)'}`,
+                                            borderColor: isSelected ? cat.color : undefined,
                                             background: isSelected ? `${cat.color}10` : '#fff',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px',
-                                            transition: 'all 0.2s ease'
                                         }}
                                     >
-                                        <div style={{
-                                            width: '36px',
-                                            height: '36px',
-                                            borderRadius: '10px',
-                                            background: isSelected ? cat.color : 'var(--bg-surface)',
-                                            color: isSelected ? '#fff' : cat.color,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center'
-                                        }}>
+                                        <div
+                                            className={cn(
+                                                "w-9 h-9 rounded-[10px] flex items-center justify-center",
+                                                isSelected ? "text-white" : ""
+                                            )}
+                                            style={{
+                                                background: isSelected ? cat.color : 'var(--bg-surface)',
+                                                color: isSelected ? '#fff' : cat.color,
+                                            }}
+                                        >
                                             <Icon size={18} />
                                         </div>
-                                        <span style={{
-                                            fontSize: '13px',
-                                            fontWeight: '700',
-                                            color: isSelected ? cat.color : 'var(--text-main)'
-                                        }}>
+                                        <span
+                                            className="text-[13px] font-bold"
+                                            style={{ color: isSelected ? cat.color : 'var(--text-main)' }}
+                                        >
                                             {cat.label}
                                         </span>
                                     </motion.div>
@@ -188,152 +140,83 @@ const AddObservationModal: React.FC<AddObservationModalProps> = ({ isOpen, onClo
                     </div>
 
                     {/* Text Area */}
-                    <div style={{ marginBottom: '24px' }}>
-                        <label style={{
-                            display: 'block',
-                            fontSize: '13px',
-                            fontWeight: '700',
-                            color: 'var(--text-main)',
-                            marginBottom: '8px'
-                        }}>
-                            Observation Details <span style={{ color: '#dc2626' }}>*</span>
+                    <div className="mb-6">
+                        <label className="block text-[13px] font-bold text-text-main mb-2">
+                            Observation Details <span className="text-red-600">*</span>
                         </label>
-                        <div style={{
-                            display: 'block',
-                            fontSize: '12px',
-                            color: 'var(--text-dim)',
-                            marginBottom: '4px',
-                            fontStyle: 'italic',
-                            wordWrap: 'break-word'
-                        }}>
+                        <div className="block text-xs text-text-dim mb-1 italic break-words">
                             Professional commentary for the final report or internal reference.
                         </div>
                         <textarea
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
                             placeholder="Enter detailed observations regarding the property's suitability, potential risks, or specific client needs..."
-                            style={{
-                                width: '100%',
-                                minHeight: '160px',
-                                padding: '14px',
-                                borderRadius: '12px',
-                                border: '1px solid var(--border)',
-                                fontSize: '14px',
-                                fontFamily: 'inherit',
-                                resize: 'vertical',
-                                outline: 'none',
-                                lineHeight: '1.6'
-                            }}
+                            className="w-full min-h-[160px] p-3.5 rounded-xl border border-border text-sm resize-y outline-none leading-relaxed font-sans"
                         />
-                        <div style={{
-                            marginTop: '8px',
-                            fontSize: '11px',
-                            color: 'var(--text-dim)',
-                            textAlign: 'right'
-                        }}>
+                        <div className="mt-2 text-[11px] text-text-dim text-right">
                             {content.length} characters
                         </div>
                     </div>
 
                     {/* Report Inclusion Toggle */}
-                    <div style={{
-                        padding: '20px',
-                        background: 'var(--bg-surface)',
-                        borderRadius: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        border: '1px solid var(--border)'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ padding: '8px', borderRadius: '10px', background: includeInReport ? '#ecfdf5' : '#f8fafc', color: includeInReport ? '#10b981' : 'var(--text-dim)' }}>
+                    <div className="p-5 bg-slate-50 rounded-2xl flex items-center justify-between border border-border">
+                        <div className="flex items-center gap-3">
+                            <div className={cn(
+                                "p-2 rounded-[10px]",
+                                includeInReport ? "bg-emerald-50 text-emerald-500" : "bg-slate-50 text-text-dim"
+                            )}>
                                 <FileText size={20} />
                             </div>
                             <div>
-                                <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)' }}>
+                                <div className="text-sm font-extrabold text-text-main">
                                     Include in Final Report
                                 </div>
-                                <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginTop: '2px' }}>
+                                <div className="text-[11px] text-text-dim mt-0.5">
                                     Visible to client in the clinical document
                                 </div>
                             </div>
                         </div>
-                        <label style={{ position: 'relative', display: 'inline-block', width: '52px', height: '28px' }}>
+                        <label className="relative inline-block w-[52px] h-7">
                             <input
                                 type="checkbox"
                                 checked={includeInReport}
                                 onChange={(e) => setIncludeInReport(e.target.checked)}
-                                style={{ opacity: 0, width: 0, height: 0 }}
+                                className="opacity-0 w-0 h-0"
                             />
-                            <span style={{
-                                position: 'absolute',
-                                cursor: 'pointer',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                background: includeInReport ? '#10b981' : '#cbd5e1',
-                                transition: '0.3s',
-                                borderRadius: '28px'
-                            }}>
-                                <span style={{
-                                    position: 'absolute',
-                                    content: '',
-                                    height: '22px',
-                                    width: '22px',
-                                    left: includeInReport ? '27px' : '3px',
-                                    bottom: '3px',
-                                    background: '#fff',
-                                    transition: '0.3s',
-                                    borderRadius: '50%',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                }} />
+                            <span
+                                className={cn(
+                                    "absolute cursor-pointer inset-0 rounded-full transition-all duration-300",
+                                    includeInReport ? "bg-emerald-500" : "bg-slate-300"
+                                )}
+                            >
+                                <span
+                                    className="absolute h-[22px] w-[22px] bottom-[3px] bg-white rounded-full transition-all duration-300 shadow-sm"
+                                    style={{ left: includeInReport ? '27px' : '3px' }}
+                                />
                             </span>
                         </label>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div style={{
-                    padding: '20px 32px',
-                    borderTop: '1px solid var(--border)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                }}>
-                    <div style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
+                <div className="py-5 px-8 border-t border-border flex justify-between items-center">
+                    <div className="text-xs text-text-dim">
                         <strong>Author:</strong> {user?.name || 'Unknown'} ({user?.role || 'OT'})
                     </div>
-                    <div style={{ display: 'flex', gap: '12px' }}>
+                    <div className="flex gap-3">
                         <button
                             onClick={onClose}
-                            style={{
-                                padding: '10px 20px',
-                                borderRadius: '10px',
-                                fontSize: '14px',
-                                fontWeight: '700',
-                                color: 'var(--text-dim)',
-                                background: 'transparent',
-                                border: 'none',
-                                cursor: 'pointer'
-                            }}
+                            className="py-2.5 px-5 rounded-[10px] text-sm font-bold text-text-dim bg-transparent border-none cursor-pointer"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleSave}
-                            disabled={!selectedCategory || !content.trim() || isSaving}
-                            style={{
-                                padding: '10px 24px',
-                                borderRadius: '10px',
-                                fontSize: '14px',
-                                fontWeight: '700',
-                                color: '#fff',
-                                background: (!selectedCategory || !content.trim()) ? '#cbd5e1' : 'var(--primary)',
-                                border: 'none',
-                                cursor: (!selectedCategory || !content.trim()) ? 'not-allowed' : 'pointer',
-                                boxShadow: (!selectedCategory || !content.trim()) ? 'none' : '0 4px 12px var(--primary-glow)'
-                            }}
+                            disabled={isDisabled || isSaving}
+                            className={cn(
+                                "py-2.5 px-6 rounded-[10px] text-sm font-bold text-white border-none transition-all",
+                                isDisabled ? "bg-slate-300 cursor-not-allowed" : "bg-primary cursor-pointer shadow-[0_4px_12px_var(--primary-glow)]"
+                            )}
                         >
                             {isSaving ? 'Saving...' : 'Save Note'}
                         </button>

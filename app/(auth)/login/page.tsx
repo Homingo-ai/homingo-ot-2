@@ -28,7 +28,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="h-screen w-screen bg-linear-to-br from-[#0f0c29] to-[#301481] flex items-center justify-center fixed inset-0 z-9999">
+    <div className="h-screen w-screen bg-gradient-to-br from-[#0f0c29] to-[#301481] flex items-center justify-center fixed inset-0 z-[9999]">
       {/* Background decorative elements */}
       <div className="absolute top-[20%] left-[10%] w-[300px] h-[300px] bg-(--secondary) blur-[150px] opacity-20 rounded-full"></div>
       <div className="absolute bottom-[20%] right-[10%] w-[400px] h-[400px] bg-(--accent) blur-[180px] opacity-10 rounded-full"></div>

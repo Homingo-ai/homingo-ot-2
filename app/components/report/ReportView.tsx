@@ -23,91 +23,83 @@ const AHR_MODIFIED = '#059669'; // Override Green
 // --- Premium Helper Components ---
 
 const AHR_Header = ({ address, id, date, uprn }: { address: string; id: string; date: string; uprn?: string }) => (
-    <div style={{ borderBottom: `4px solid ${AHR_DEEP}`, paddingBottom: '16px', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <div style={{ width: '64px', height: '64px', background: AHR_DEEP, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+    <div className="border-b-4 border-violet-900 pb-4 mb-6">
+        <div className="flex justify-between items-start">
+            <div className="flex gap-4 items-center">
+                <div className="w-16 h-16 bg-violet-900 rounded-xl flex items-center justify-center text-white">
                     <Shield size={32} />
                 </div>
                 <div>
-                    <h1 style={{ fontSize: '24px', fontWeight: '900', color: AHR_SLATE, margin: 0, letterSpacing: '-0.02em' }}>London AHR</h1>
-                    <p style={{ fontSize: '13px', color: AHR_VIOLET, fontWeight: '500', margin: 0, textTransform: 'uppercase' }}>OFFICIAL ACCESSIBILITY SURVEY REPORT</p>
+                    <h1 className="text-2xl font-black text-slate-800 m-0 tracking-tight">London AHR</h1>
+                    <p className="text-[13px] text-violet-600 font-medium m-0 uppercase">OFFICIAL ACCESSIBILITY SURVEY REPORT</p>
                 </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-                <div style={{ background: AHR_SLATE, color: '#fff', padding: '12px 20px', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '10px', fontWeight: '500', opacity: 0.8, textTransform: 'uppercase' }}>UPRN / Case ID</div>
-                    <div style={{ fontSize: '18px', fontWeight: '900', letterSpacing: '1px' }}>{uprn || id}</div>
+            <div className="text-right">
+                <div className="bg-slate-800 text-white py-3 px-5 rounded-lg">
+                    <div className="text-[10px] font-medium opacity-80 uppercase">UPRN / Case ID</div>
+                    <div className="text-lg font-black tracking-wider">{uprn || id}</div>
                 </div>
-                <p style={{ fontSize: '12px', fontWeight: '500', color: '#64748b', marginTop: '8px' }}>Issued: {date}</p>
+                <p className="text-xs font-medium text-slate-500 mt-2">Issued: {date}</p>
             </div>
         </div>
     </div>
 );
 
 const SectionBlock = ({ title, children, number, sub }: { title: string; children: React.ReactNode; number?: string; sub?: string }) => (
-    <div style={{ marginBottom: '24px', pageBreakInside: 'avoid' }}>
-        <div style={{ borderLeft: `4px solid ${AHR_DEEP}`, paddingLeft: '16px', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                {number && <span style={{ fontSize: '18px', fontWeight: '900', color: AHR_VIOLET }}>{number}</span>}
-                <h2 style={{ fontSize: '14px', fontWeight: '900', textTransform: 'uppercase', color: AHR_DEEP, letterSpacing: '0.05em', margin: 0 }}>{title}</h2>
+    <div className="mb-6 break-inside-avoid">
+        <div className="border-l-4 border-violet-900 pl-4 mb-3">
+            <div className="flex items-baseline gap-2">
+                {number && <span className="text-lg font-black text-violet-600">{number}</span>}
+                <h2 className="text-sm font-black uppercase text-violet-900 tracking-wider m-0">{title}</h2>
             </div>
-            {sub && <p style={{ fontSize: '11px', color: '#64748b', margin: '4px 0 0', fontWeight: '400' }}>{sub}</p>}
+            {sub && <p className="text-[11px] text-slate-500 mt-1 font-normal">{sub}</p>}
         </div>
-        <div style={{ padding: '0 4px' }}>{children}</div>
+        <div className="px-1">{children}</div>
     </div>
 );
 
-const CompactField = ({ label, value, bold = false, isModified = false, onClick, isLocked = false }: { label: string; value: any; bold?: boolean; isModified?: boolean; onClick?: () => void; isLocked?: boolean }) => (
-    <div
-        onClick={isLocked ? undefined : onClick}
-        style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            borderBottom: `1px solid ${isModified && !isLocked ? AHR_MODIFIED : AHR_BORDER}`,
-            padding: '4px 0',
-            alignItems: 'center',
-            cursor: (onClick && !isLocked) ? 'pointer' : 'default',
-            color: isModified && !isLocked ? AHR_MODIFIED : 'inherit'
-        }}>
-        <span style={{ fontSize: '11px', fontWeight: '500', color: isModified && !isLocked ? AHR_MODIFIED : '#64748b', textTransform: 'uppercase' }}>{label}</span>
-        <span style={{ fontSize: '12px', fontWeight: bold ? '900' : '500', color: isModified && !isLocked ? AHR_MODIFIED : AHR_SLATE }}>{value ?? '-'}</span>
-    </div>
-);
+const CompactField = ({ label, value, bold = false, isModified = false, onClick, isLocked = false }: { label: string; value: any; bold?: boolean; isModified?: boolean; onClick?: () => void; isLocked?: boolean }) => {
+    const modified = isModified && !isLocked;
+    return (
+        <div
+            onClick={isLocked ? undefined : onClick}
+            className={`flex justify-between py-1 items-center border-b ${modified ? 'border-emerald-600 text-emerald-600' : 'border-slate-200'} ${(onClick && !isLocked) ? 'cursor-pointer' : 'cursor-default'}`}
+        >
+            <span className={`text-[11px] font-medium uppercase ${modified ? 'text-emerald-600' : 'text-slate-500'}`}>{label}</span>
+            <span className={`text-xs ${bold ? 'font-black' : 'font-medium'} ${modified ? 'text-emerald-600' : 'text-slate-800'}`}>{value ?? '-'}</span>
+        </div>
+    );
+};
 
 const FieldValue = ({ label, value, icon: Icon }: { label: string; value: any; icon?: any }) => (
-    <div style={{ marginBottom: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '500', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>
+    <div className="mb-2">
+        <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400 uppercase mb-1">
             {Icon && <Icon size={12} />} {label}
         </div>
-        <div style={{ fontSize: '14px', fontWeight: '500', color: AHR_SLATE }}>{value || 'Not Specified'}</div>
+        <div className="text-sm font-medium text-slate-800">{value || 'Not Specified'}</div>
     </div>
 );
 
 const AHR_Checkbox = ({ checked, label, inverted = false }: { checked: boolean; label: string; inverted?: boolean }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-        <div style={{
-            width: '18px', height: '18px', border: `2px solid ${checked ? AHR_VIOLET : '#cbd5e1'}`,
-            borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: checked ? AHR_VIOLET : '#fff',
-        }}>
+    <div className="flex items-center gap-2.5 mb-1">
+        <div className={`w-[18px] h-[18px] rounded border-2 flex items-center justify-center ${checked ? 'border-violet-600 bg-violet-600' : 'border-slate-300 bg-white'}`}>
             {checked && <Check size={12} color="#fff" strokeWidth={4} />}
         </div>
-        <span style={{ fontSize: '12px', fontWeight: '500', color: checked ? AHR_SLATE : '#94a3b8' }}>{label}</span>
+        <span className={`text-xs font-medium ${checked ? 'text-slate-800' : 'text-slate-400'}`}>{label}</span>
     </div>
 );
 
 const MeasurementBadge = ({ label, value, unit = 'cm', source }: { label: string; value: any; unit?: string; source?: string }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '6px 0' }}>
-        <div style={{ fontSize: '12px', fontWeight: '400', color: '#475569', flex: 1 }}>
+    <div className="flex items-center gap-3 py-1.5">
+        <div className="text-xs font-normal text-slate-600 flex-1">
             {label}
-            {source && <span style={{ display: 'block', fontSize: '9px', fontWeight: '400', color: '#94a3b8', textTransform: 'uppercase', marginTop: '2px' }}>Source: {source}</span>}
+            {source && <span className="block text-[9px] font-normal text-slate-400 uppercase mt-0.5">Source: {source}</span>}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ background: '#f8fafc', border: `1px solid ${AHR_BORDER}`, padding: '4px 10px', borderRadius: '6px', fontWeight: '500', color: AHR_DEEP, minWidth: '55px', textAlign: 'center', fontSize: '13px' }}>
+        <div className="flex items-center gap-2">
+            <div className="bg-slate-50 border border-slate-200 py-1 px-2.5 rounded-md font-medium text-violet-900 min-w-[55px] text-center text-[13px]">
                 {value || '-'}
             </div>
-            <span style={{ fontSize: '10px', fontWeight: '400', color: '#94a3b8', width: '20px' }}>{unit}</span>
+            <span className="text-[10px] font-normal text-slate-400 w-5">{unit}</span>
         </div>
     </div>
 );

@@ -3,7 +3,7 @@
 import React from 'react';
 import ValidationInterface from '@/app/components/validation/ValidationInterface';
 import { useRouter } from 'next/navigation';
-import { saveSurvey } from '@/lib/surveys/actions';
+import { saveSurveyClient } from '@/lib/surveys/client';
 import { Case } from '@/types/dashboard';
 import { toast } from 'sonner';
 
@@ -12,7 +12,7 @@ export default function ValidationInterfaceClient({ caseData, user }: { caseData
 
   const handleUpdateCase = async (updatedCase: Case) => {
     try {
-        const result = await saveSurvey(updatedCase);
+        const result = await saveSurveyClient(updatedCase);
         if (result.error) {
             toast.error(`Failed to save: ${result.error}`);
         } else {

@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Check, AlertCircle, Info } from 'lucide-react';
+import { cn } from '@/lib/utils/cn';
 
 interface AIConfirmationCardProps {
     label: string;
@@ -28,49 +28,32 @@ export const AIConfirmationCard: React.FC<AIConfirmationCardProps> = ({
     const isHighConfidence = (confidence || 0) > 0.8;
 
     return (
-        <div style={{
-            background: '#fff',
-            borderRadius: '20px',
-            padding: '16px',
-            border: '1px solid var(--border)',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-            position: 'relative',
-            overflow: 'hidden'
-        }}>
+        <div className="bg-white rounded-[20px] p-4 border border-border shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col gap-3 relative overflow-hidden">
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    <div style={{
-                        width: '36px', height: '36px', borderRadius: '10px',
-                        background: 'var(--primary-light)', color: 'var(--primary)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                        {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<any>, { size: 18 }) : icon}
+            <div className="flex justify-between items-start">
+                <div className="flex gap-3">
+                    <div className="w-9 h-9 rounded-[10px] bg-primary-light text-primary flex items-center justify-center">
+                        {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<{ size?: number }>, { size: 18 }) : icon}
                     </div>
                     <div>
-                        <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', marginBottom: '2px' }}>{label}</h4>
-                        {description && <p style={{ fontSize: '12px', color: '#64748b' }}>{description}</p>}
+                        <h4 className="text-[15px] font-extrabold text-slate-800 mb-0.5">{label}</h4>
+                        {description && <p className="text-xs text-slate-500">{description}</p>}
                     </div>
                 </div>
 
                 {detectedValue !== null && (
-                    <div style={{
-                        padding: '3px 10px', borderRadius: '20px',
-                        background: isHighConfidence ? '#dcfce7' : '#fef9c3',
-                        color: isHighConfidence ? '#166534' : '#854d0e',
-                        fontSize: '10px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px'
-                    }}>
-                        <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'currentColor' }} />
+                    <div className={cn(
+                        "px-2.5 py-0.5 rounded-full text-[10px] font-extrabold flex items-center gap-1",
+                        isHighConfidence ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
+                    )}>
+                        <div className="w-1.5 h-1.5 rounded-full bg-current" />
                         AI: {detectedValue.toString()}
                     </div>
                 )}
             </div>
 
             {/* Options */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-2">
                 {options.map(opt => {
                     const isSelected = userValue === opt;
                     const isSuggestion = detectedValue === opt;
@@ -79,26 +62,19 @@ export const AIConfirmationCard: React.FC<AIConfirmationCardProps> = ({
                         <button
                             key={opt}
                             onClick={() => onConfirm(opt)}
-                            style={{
-                                padding: '10px 8px',
-                                borderRadius: '12px',
-                                border: '2px solid',
-                                borderColor: isSelected ? 'var(--primary)' : isSuggestion ? 'var(--primary-light)' : '#e2e8f0',
-                                background: isSelected ? 'var(--primary)' : '#fff',
-                                color: isSelected ? '#fff' : isSuggestion ? 'var(--primary)' : '#64748b',
-                                fontWeight: '700',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px',
-                                position: 'relative'
-                            }}
+                            className={cn(
+                                "py-2.5 px-2 rounded-xl border-2 font-bold text-xs cursor-pointer transition-all flex items-center justify-center gap-1.5 relative",
+                                isSelected && "border-primary bg-primary text-white",
+                                isSuggestion && !isSelected && "border-primary-light bg-white text-primary",
+                                !isSelected && !isSuggestion && "border-slate-200 bg-white text-slate-500"
+                            )}
                         >
                             {opt}
-                            {isSuggestion && !isSelected && <div style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'var(--primary)', color: '#fff', borderRadius: '50%', padding: '2px' }}><Info size={9} /></div>}
+                            {isSuggestion && !isSelected && (
+                                <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
+                                    <Info size={9} />
+                                </div>
+                            )}
                             {isSelected && <Check size={12} />}
                         </button>
                     );
@@ -107,9 +83,9 @@ export const AIConfirmationCard: React.FC<AIConfirmationCardProps> = ({
 
             {/* Action/Feedback */}
             {detectedValue !== null && userValue !== detectedValue && userValue !== null && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: '#fff7ed', borderRadius: '10px', border: '1px solid #ffedd5' }}>
-                    <AlertCircle size={12} color="#ea580c" />
-                    <span style={{ fontSize: '11px', color: '#9a3412', fontWeight: '600' }}>Note: You have manually overridden the AI suggestion.</span>
+                <div className="flex items-center gap-1.5 py-1.5 px-3 bg-orange-50 rounded-[10px] border border-orange-100">
+                    <AlertCircle size={12} className="text-orange-600" />
+                    <span className="text-[11px] text-orange-800 font-semibold">Note: You have manually overridden the AI suggestion.</span>
                 </div>
             )}
         </div>

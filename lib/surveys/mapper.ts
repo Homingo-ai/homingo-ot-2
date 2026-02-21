@@ -7,6 +7,7 @@ export function mapSurveyToCase(s: any): Case {
     address: [s.door_number, s.street_number, s.building_name, s.street].filter(Boolean).join(' ') || 'Address Pending',
     city: s.city || '', 
     postcode: s.postcode || '',
+    phoneNumber: s.inspector_phone || s.raw_ai_data?.wizardData?.phoneNumber || undefined,
     assessmentDate: s.inspection_date || s.created_at,
     aiScore: s.compliance_score ? Number(s.compliance_score) : null,
     status: s.status || 'Draft',

@@ -1,4 +1,6 @@
 export interface FloorPlanAnalysisResult {
+  /** AI validation: true if image is a floor plan, false if random photo/unrelated document */
+  is_floor_plan?: boolean;
   entrance_level: {
     value: "GROUND" | "UPPER" | "BASEMENT";
     confidence: number;
@@ -25,12 +27,33 @@ export interface FloorPlanAnalysisResult {
     detected: boolean;
     confidence: number;
   };
+  floor_level_number: number | null;
+  stair_geometry: "Straight" | "Quarter Turn" | "Half Turn" | "Spiral" | "Winding" | null;
+  communal: {
+    communal_door_present: boolean;
+    communal_lift_present: boolean;
+    communal_lift_count: 0 | 1 | 2 | 3;
+  };
+  facilities_per_floor: {
+    access_level: string[];
+    above: string[];
+    below: string[];
+  };
+  annotations?: Array<{
+    type: 'door' | 'stairs' | 'ramp' | 'lift' | 'second_exit';
+    bbox: [number, number, number, number]; // ymin, xmin, ymax, xmax (normalized 0-1000)
+    label?: string;
+  }>;
 }
+
+import { convertHeicToJpegIfNeeded } from "./imageUtils";
 
 export const analyzeFloorPlan = async (
   file: File,
 ): Promise<FloorPlanAnalysisResult | null> => {
   try {
+    file = await convertHeicToJpegIfNeeded(file);
+
     // Convert file to base64
     const base64Data = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -46,20 +69,38 @@ export const analyzeFloorPlan = async (
     });
 
     const prompt = `
-            Analyze the floor plan image.
-            1.  **Entrance Level**: Identify the main entrance floor (Ground/Upper).
-            2.  **Lifts**: Detect any 'Lift' or 'Elevator' symbols.
-            3.  **Stairs**: Detect internal staircases.
-            4.  **Bedrooms**: Count rooms labeled 'Bed', 'Bedroom', 'Master', 'Box Room'.
-            5.  **Garden/Balcony**: Look for 'Garden', 'Balcony', 'Terrace', 'Patio' labels or outlines.
-            6.  **Parking**: Look for 'Garage', 'Carport', 'Driveway'.
-            7.  **Second Exit**: Look for a rear door leading to outside.
+            STEP 0 (VALIDATION): First confirm this image is a floor plan or architectural drawing of a property (room layout, walls, doors, dimensions). If it is a random photo, selfie, unrelated document, or not a floor plan, set is_floor_plan: false and return the minimal structure with is_floor_plan: false. If it IS a floor plan, set is_floor_plan: true and proceed with the full analysis below.
+            
+            **1. Deep Structural Analysis:**
+            - **Entrance Level**: Identify the main entrance floor (GROUND/UPPER/BASEMENT).
+            - **Floor Level Number**: If entrance is UPPER, which floor number? (1 = first floor, 2 = second, etc.). Null if ground.
+            - **Lifts**: Detect any 'Lift' or 'Elevator' symbols.
+            - **Stairs**: Detect internal staircases. Identify geometry: Straight / Quarter Turn / Half Turn / Spiral / Winding.
+            - **Bedrooms**: Count rooms labeled 'Bed', 'Bedroom', 'Master', 'Box Room'.
+            - **Garden/Balcony**: Look for 'Garden', 'Balcony', 'Terrace', 'Patio' labels or outlines.
+            - **Parking**: Look for 'Garage', 'Carport', 'Driveway'.
+            - **Second Exit**: Look for a rear door or secondary exit leading outside.
+            - **Communal Areas**: Does the plan show a shared communal entrance/lobby? Is there a communal lift? How many lifts?
+            - **Facilities per floor**: List rooms for each floor (access_level, above, below).
+            
+            **2. Detailed Measurements & Features (Estimate/Read):**
+            - **Door Widths**: Look for dimension lines on doors (e.g., '800', '762'). Estimate if not explicit.
+            - **Ramps**: Check for ramp symbols or labels.
+            - **Stair Details**: Count steps if visible. Check for handrails.
+            - **Thresholds**: Any step at the entrance?
+
+            **3. Spatial Annotations (Bounding Boxes):**
+            - Identify key accessibility features: Main Entrance Door, Internal Stairs, Ramps, Lifts, Second Exit.
+            - Return bounding boxes in [ymin, xmin, ymax, xmax] format, normalized to 0-1000.
 
             RETURN JSON ONLY:
             {
+              "is_floor_plan": boolean,
               "entrance_level": { "value": "GROUND" | "UPPER" | "BASEMENT", "confidence": 0.0-1.0 },
+              "floor_level_number": number | null,
               "lift": { "detected": boolean, "confidence": 0.0-1.0 },
               "internal_stairs": { "detected": boolean, "confidence": 0.0-1.0 },
+              "stair_geometry": "Straight" | "Quarter Turn" | "Half Turn" | "Spiral" | "Winding" | null,
               "bedroom_count": { "value": number, "confidence": 0.0-1.0 },
               "external_access": {
                 "garden_present": boolean,
@@ -67,7 +108,24 @@ export const analyzeFloorPlan = async (
                 "parking_present": boolean,
                 "confidence": 0.0-1.0
               },
-              "second_exit": { "detected": boolean, "confidence": 0.0-1.0 }
+              "second_exit": { "detected": boolean, "confidence": 0.0-1.0 },
+              "communal": {
+                "communal_door_present": boolean,
+                "communal_lift_present": boolean,
+                "communal_lift_count": 0 | 1 | 2 | 3
+              },
+              "facilities_per_floor": {
+                "access_level": ["Living Room", "Kitchen", ...],
+                "above": ["Bed 1", "Bed 2", ...],
+                "below": []
+              },
+              "annotations": [
+                {
+                  "type": "door" | "stairs" | "ramp" | "lift" | "second_exit",
+                  "bbox": [ymin, xmin, ymax, xmax],
+                  "label": "Main Entrance" // Optional description
+                }
+              ]
             }
         `;
 
@@ -103,16 +161,23 @@ export const analyzeFloorPlan = async (
     let cleanJson = data.result;
 
     if (typeof cleanJson === "object") {
-      return cleanJson as FloorPlanAnalysisResult;
+      const result = cleanJson as FloorPlanAnalysisResult;
+      if (result.is_floor_plan === false) return null;
+      return result;
     }
 
-    if (cleanJson.includes("```json")) {
-      cleanJson = cleanJson.replace(/```json\n?/, "").replace(/```/, "");
-    } else if (cleanJson.includes("```")) {
-      cleanJson = cleanJson.replace(/```\n?/, "").replace(/```/, "");
+    if (typeof cleanJson === "string") {
+      if (cleanJson.includes("```json")) {
+        cleanJson = cleanJson.replace(/```json\n?/, "").replace(/```/, "");
+      } else if (cleanJson.includes("```")) {
+        cleanJson = cleanJson.replace(/```\n?/, "").replace(/```/, "");
+      }
+      const result = JSON.parse(cleanJson) as FloorPlanAnalysisResult;
+      if (result.is_floor_plan === false) return null;
+      return result;
     }
 
-    return JSON.parse(cleanJson) as FloorPlanAnalysisResult;
+    return null;
   } catch (error) {
     console.error("Error analyzing floor plan:", error);
     return null;

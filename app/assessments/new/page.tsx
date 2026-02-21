@@ -3,7 +3,7 @@
 import React from "react";
 import AssessmentWizard from "@/app/components/wizard/AssessmentWizard";
 import { useRouter } from "next/navigation";
-import { saveSurvey } from "@/lib/surveys/actions";
+import { saveSurveyClient } from "@/lib/surveys/client";
 import { toast } from "sonner";
 
 export default function NewAssessmentPage() {
@@ -11,7 +11,7 @@ export default function NewAssessmentPage() {
 
   const handleComplete = async (newCase: any) => {
     try {
-      const result = await saveSurvey(newCase);
+      const result = await saveSurveyClient(newCase);
       if (result.error) {
         toast.error(`Failed to save: ${result.error}`);
         return;
@@ -31,7 +31,7 @@ export default function NewAssessmentPage() {
   };
 
   return (
-    <div style={{ height: "100vh", background: "#f8fafc" }}>
+    <div className="min-h-screen bg-slate-50">
       <AssessmentWizard
         isOpen={true}
         onClose={() => router.push("/")}

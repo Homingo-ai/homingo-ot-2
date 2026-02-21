@@ -13,7 +13,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const { data: survey, error } = await supabase
     .from('surveys')
     .select('*')
-    .eq('id', id)
+    .eq('id', Number(id))
     .single();
 
   if (error || !survey) {

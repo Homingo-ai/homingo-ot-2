@@ -1,153 +1,186 @@
-
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { WizardStepProps } from '../types';
+import React from "react";
+import { motion } from "framer-motion";
+import { Upload, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { WizardStepProps } from "../types";
+import { cn } from "@/lib/utils/cn";
 
 const FloorPlanStep: React.FC<WizardStepProps> = ({
-    formData,
-    handleUpdateField,
-    handlePhotoUpload,
-    isAnalyzing
+  formData,
+  handleUpdateField,
+  handlePhotoUpload,
+  isAnalyzing,
+  floorPlanAnalysis,
 }) => {
-    const hasPlan = !!formData.floorPlan;
+  const hasPlan = !!formData.floorPlan;
+  const planUrl = React.useMemo(() => {
+    if (!formData.floorPlan) return null;
+    if (typeof formData.floorPlan === "string") return formData.floorPlan;
+    return URL.createObjectURL(formData.floorPlan);
+  }, [formData.floorPlan]);
 
-    return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            style={{ padding: '16px', textAlign: 'center' }}
+  const isPlanApproved = floorPlanAnalysis && floorPlanAnalysis.is_floor_plan !== false;
+  const overlayState = hasPlan
+    ? isAnalyzing
+      ? "purple"
+      : isPlanApproved
+        ? "green"
+        : "yellow"
+    : null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      className="p-4 text-center"
+    >
+      <div className="mb-4">
+        <h3 className="text-xl font-extrabold text-primary mb-0.5">
+          Floor Plan Analysis
+        </h3>
+        <p className="text-text-dim text-xs">
+          Upload a drawing to automate 80% of the accessibility assessment.
+        </p>
+      </div>
+
+      <div className="max-w-[600px] mx-auto">
+        <label
+          htmlFor="floorPlanUpload"
+          className={cn(
+            "flex flex-col items-center justify-center border-2 border-dashed rounded-[20px] cursor-pointer transition-all relative overflow-hidden min-h-[200px]",
+            hasPlan ? "p-0 border-none" : "py-8 px-5",
+            isAnalyzing && "border-primary bg-primary-light cursor-wait",
+            hasPlan && !isAnalyzing && "bg-white",
+            !hasPlan && !isAnalyzing && "bg-slate-50 border-slate-300",
+          )}
         >
-            <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--primary)', marginBottom: '2px' }}>Floor Plan Analysis</h3>
-                <p style={{ color: 'var(--text-dim)', fontSize: '13px' }}>Upload a drawing to automate 80% of the accessibility assessment.</p>
-            </div>
+          <input
+            type="file"
+            id="floorPlanUpload"
+            accept="image/*,image/heic,.heic,.pdf"
+            hidden
+            onChange={handlePhotoUpload}
+            disabled={isAnalyzing}
+          />
 
-            <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-                <label
-                    htmlFor="floorPlanUpload"
-                    style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '32px 20px',
-                        border: '2px dashed',
-                        borderColor: isAnalyzing ? 'var(--primary)' : hasPlan ? '#22c55e' : '#cbd5e1',
-                        background: isAnalyzing ? 'var(--primary-light)' : hasPlan ? '#f0fdf4' : '#f8fafc',
-                        borderRadius: '20px',
-                        cursor: isAnalyzing ? 'wait' : 'pointer',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        position: 'relative',
-                        overflow: 'hidden'
-                    }}
-                >
-                    <input
-                        type="file"
-                        id="floorPlanUpload"
-                        accept="image/*,.pdf"
-                        hidden
-                        onChange={handlePhotoUpload}
-                        disabled={isAnalyzing}
-                    />
-
-                    <AnimatePresence mode="wait">
-                        {isAnalyzing ? (
-                            <motion.div
-                                key="analyzing"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}
-                            >
-                                <Loader2 className="animate-spin" size={40} color="var(--primary)" />
-                                <span style={{ fontWeight: '700', color: 'var(--primary)', fontSize: '14px' }}>AI is scanning floor plan...</span>
-                            </motion.div>
-                        ) : hasPlan ? (
-                            <motion.div
-                                key="done"
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}
-                            >
-                                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                                    <CheckCircle size={28} />
-                                </div>
-                                <div style={{ textAlign: 'center' }}>
-                                    <span style={{ display: 'block', fontWeight: '800', color: '#166534', fontSize: '15px' }}>Plan Uploaded Successfully</span>
-                                    <span style={{ fontSize: '12px', color: '#166534', opacity: 0.8 }}>Click to replace file</span>
-                                </div>
-                            </motion.div>
-                        ) : (
-                            <motion.div
-                                key="idle"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}
-                            >
-                                <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                                    <Upload size={24} />
-                                </div>
-                                <div style={{ textAlign: 'center' }}>
-                                    <span style={{ display: 'block', fontWeight: '800', color: '#1e293b', fontSize: '15px' }}>Click to Upload Plan</span>
-                                    <span style={{ fontSize: '12px', color: '#64748b' }}>PNG, JPG or PDF (Max 10MB)</span>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    {isAnalyzing && (
-                        <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: '100%' }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                            style={{ position: 'absolute', bottom: 0, left: 0, height: '4px', background: 'var(--primary)' }}
-                        />
+          {hasPlan && planUrl ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="w-full relative"
+            >
+              <div className="relative w-full h-[200px] rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center bg-slate-50">
+                <img
+                  src={planUrl}
+                  alt="Floor Plan"
+                  className="max-w-full max-h-full w-auto h-auto object-contain"
+                />
+                {overlayState && (
+                  <div
+                    className={cn(
+                      "absolute inset-0 flex items-center justify-center transition-colors",
+                      overlayState === "purple" && "bg-purple-500/40",
+                      overlayState === "green" && "bg-green-500/40",
+                      overlayState === "yellow" && "bg-amber-400/40",
                     )}
-                </label>
-
-                <div
-                    onClick={() => handleUpdateField('hasNoFloorPlan', !formData.hasNoFloorPlan)}
-                    style={{
-                        marginTop: '12px',
-                        padding: '10px 14px',
-                        background: formData.hasNoFloorPlan ? 'var(--primary-light)' : '#fff',
-                        borderRadius: '12px',
-                        border: '1px solid',
-                        borderColor: formData.hasNoFloorPlan ? 'var(--primary)' : '#e2e8f0',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    <div style={{
-                        width: '18px', height: '18px', borderRadius: '4px', border: '2px solid',
-                        borderColor: formData.hasNoFloorPlan ? 'var(--primary)' : '#cbd5e1',
-                        background: formData.hasNoFloorPlan ? 'var(--primary)' : 'transparent',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff'
-                    }}>
-                        {formData.hasNoFloorPlan && <CheckCircle size={12} />}
+                  >
+                    {overlayState === "purple" && (
+                      <div className="flex flex-col items-center gap-2 text-white">
+                        <Loader2 className="animate-spin" size={32} />
+                        <span className="font-bold text-sm">
+                          AI is scanning floor plan...
+                        </span>
+                      </div>
+                    )}
+                    {overlayState === "green" && (
+                      <div className="flex flex-col items-center gap-2 text-white">
+                        <CheckCircle size={32} />
+                        <span className="font-bold text-sm">Plan Approved</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!isAnalyzing && (
+                  <div
+                    className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold z-20"
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "0")}
+                  >
+                    <div className="flex items-center gap-2 bg-black/60 py-2 px-4 rounded-full">
+                      <Upload size={16} />
+                      <span>Click to Replace</span>
                     </div>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: formData.hasNoFloorPlan ? 'var(--primary)' : '#475569' }}>
-                        I don't have a floor plan (Estimate from photos)
-                    </span>
-                </div>
-            </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center gap-3"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center text-slate-500 shadow-md">
+                <Upload size={24} />
+              </div>
+              <div className="text-center">
+                <span className="block font-extrabold text-slate-800 text-[15px]">
+                  Click to Upload Plan
+                </span>
+                <span className="text-xs text-slate-500">
+                  PNG, JPG or PDF (Max 10MB)
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </label>
 
-            <div style={{ marginTop: '24px', padding: '16px', background: '#f8fafc', borderRadius: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px', textAlign: 'left' }}>
-                <AlertCircle size={18} color="var(--primary)" style={{ marginTop: '2px' }} />
-                <div>
-                    <span style={{ display: 'block', fontWeight: '800', fontSize: '13px', color: '#1e293b', marginBottom: '2px' }}>Pro Tip</span>
-                    <p style={{ fontSize: '12px', color: '#64748b', lineHeight: '1.4' }}>
-                        A clear, top-down drawing helps our engine detect door widths, stair counts, and dimensions with millimeter precision.
-                    </p>
-                </div>
-            </div>
-        </motion.div>
-    );
+        <div
+          onClick={() =>
+            handleUpdateField("hasNoFloorPlan", !formData.hasNoFloorPlan)
+          }
+          className={cn(
+            "mt-3 py-2.5 px-3.5 rounded-xl cursor-pointer flex items-center gap-2.5 transition-all border",
+            formData.hasNoFloorPlan
+              ? "bg-primary-light border-primary"
+              : "bg-white border-slate-200",
+          )}
+        >
+          <div
+            className={cn(
+              "w-[18px] h-[18px] rounded border-2 flex items-center justify-center text-white shrink-0",
+              formData.hasNoFloorPlan
+                ? "border-primary bg-primary"
+                : "border-slate-300 bg-transparent",
+            )}
+          >
+            {formData.hasNoFloorPlan && <CheckCircle size={12} />}
+          </div>
+          <span
+            className={cn(
+              "text-xs font-bold",
+              formData.hasNoFloorPlan ? "text-primary" : "text-slate-600",
+            )}
+          >
+            I don&apos;t have a floor plan (Estimate from photos)
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-6 p-4 bg-slate-50 rounded-2xl flex items-start gap-3 text-left">
+        <AlertCircle size={18} className="text-primary mt-0.5 shrink-0" />
+        <div>
+          <span className="block font-extrabold text-xs text-slate-800 mb-0.5">
+            Pro Tip
+          </span>
+          <p className="text-xs text-slate-500 leading-snug">
+            A clear, top-down drawing helps our engine detect door widths, stair
+            counts, and dimensions with millimeter precision.
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  );
 };
 
 export default FloorPlanStep;

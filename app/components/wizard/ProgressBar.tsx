@@ -2,6 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
+import { cn } from '@/lib/utils/cn';
 
 interface ProgressBarProps {
     currentStep: number;
@@ -10,33 +11,14 @@ interface ProgressBarProps {
 
 const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, steps }) => {
     return (
-        <div style={{
-            padding: '10px 20px',
-            background: 'rgba(255, 255, 255, 0.8)',
-            backdropFilter: 'blur(12px)',
-            borderBottom: '1px solid var(--border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '6px',
-            position: 'sticky',
-            top: 0,
-            zIndex: 10
-        }}>
+        <div className="py-2.5 px-5 bg-white/80 backdrop-blur-xl border-b border-border flex items-start justify-between gap-1.5 sticky top-0 z-10">
             {steps.map((s, idx) => {
                 const isActive = s.id === currentStep;
                 const isCompleted = s.id < currentStep;
 
                 return (
                     <React.Fragment key={s.id}>
-                        <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '4px',
-                            flex: 1,
-                            position: 'relative'
-                        }}>
+                        <div className="flex flex-col items-center gap-1 flex-1 relative min-h-12 justify-start">
                             <motion.div
                                 animate={{
                                     scale: isActive ? 1.05 : 1,
@@ -44,48 +26,29 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, steps }) => {
                                     borderColor: isCompleted ? '#22c55e' : isActive ? 'var(--primary)' : '#e2e8f0',
                                     color: isCompleted || isActive ? '#fff' : '#94a3b8'
                                 }}
-                                style={{
-                                    width: '28px',
-                                    height: '28px',
-                                    borderRadius: '8px',
-                                    border: '2px solid',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    zIndex: 2,
-                                    boxShadow: isActive ? '0 0 10px rgba(99, 102, 241, 0.15)' : 'none'
-                                }}
+                                className={cn(
+                                    "w-7 h-7 rounded-lg border-2 flex items-center justify-center z-[2]",
+                                    isActive && "shadow-[0_0_10px_rgba(99,102,241,0.15)]"
+                                )}
                             >
-                                {isCompleted ? <Check size={14} strokeWidth={3} /> : React.isValidElement(s.icon) ? React.cloneElement(s.icon as React.ReactElement<any>, { size: 14 }) : s.icon}
+                                {isCompleted ? <Check size={14} strokeWidth={3} /> : React.isValidElement(s.icon) ? React.cloneElement(s.icon as React.ReactElement<{ size?: number }>, { size: 14 }) : s.icon}
                             </motion.div>
 
-                            <span style={{
-                                fontSize: '8.5px',
-                                fontWeight: '800',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.4px',
-                                color: isActive ? 'var(--primary)' : isCompleted ? '#22c55e' : '#94a3b8',
-                                textAlign: 'center',
-                                display: idx % 2 === 0 || isActive ? 'block' : 'none',
-                                maxWidth: '60px'
-                            }}>
+                            <span className={cn(
+                                "text-[8.5px] font-extrabold uppercase tracking-wider text-center max-w-[60px] min-h-3.5 leading-3.5",
+                                isActive && "text-primary",
+                                isCompleted && !isActive && "text-green-600",
+                                !isActive && !isCompleted && "text-slate-400"
+                            )}>
                                 {s.title}
                             </span>
                         </div>
                         {idx < steps.length - 1 && (
-                            <div style={{
-                                flex: 1,
-                                height: '2px',
-                                background: '#e2e8f0',
-                                position: 'relative',
-                                top: '-9px',
-                                borderRadius: '2px',
-                                overflow: 'hidden'
-                            }}>
+                            <div className="flex-1 h-0.5 mt-3 bg-slate-200 rounded-sm overflow-hidden shrink-0">
                                 <motion.div
                                     initial={{ width: 0 }}
                                     animate={{ width: isCompleted ? '100%' : '0%' }}
-                                    style={{ height: '100%', background: '#22c55e' }}
+                                    className="h-full bg-green-600"
                                 />
                             </div>
                         )}

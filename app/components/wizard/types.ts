@@ -20,4 +20,5 @@ export interface WizardStepProps {
   analysisComplete?: boolean;
   categoryResults?: Record<string, 'valid' | 'invalid'>;
   onPhotosChanged?: () => void;
+  onClearFloorPlan?: () => void;
 }

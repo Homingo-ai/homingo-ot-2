@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Upload, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Upload, Loader2, CheckCircle, AlertCircle, Trash2, RefreshCw } from "lucide-react";
 import { WizardStepProps } from "../types";
 import { cn } from "@/lib/utils/cn";
 
@@ -10,7 +10,9 @@ const FloorPlanStep: React.FC<WizardStepProps> = ({
   handlePhotoUpload,
   isAnalyzing,
   floorPlanAnalysis,
+  onClearFloorPlan,
 }) => {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const hasPlan = !!formData.floorPlan;
   const planUrl = React.useMemo(() => {
     if (!formData.floorPlan) return null;
@@ -26,6 +28,18 @@ const FloorPlanStep: React.FC<WizardStepProps> = ({
         ? "green"
         : "yellow"
     : null;
+
+  const handleRemove = () => {
+    onClearFloorPlan?.();
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleReplace = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+      fileInputRef.current.click();
+    }
+  };
 
   return (
     <motion.div
@@ -47,14 +61,15 @@ const FloorPlanStep: React.FC<WizardStepProps> = ({
         <label
           htmlFor="floorPlanUpload"
           className={cn(
-            "flex flex-col items-center justify-center border-2 border-dashed rounded-[20px] cursor-pointer transition-all relative overflow-hidden min-h-[200px]",
-            hasPlan ? "p-0 border-none" : "py-8 px-5",
+            "flex flex-col items-center justify-center border-2 border-dashed rounded-[20px] transition-all relative overflow-hidden min-h-[200px]",
+            hasPlan ? "p-0 border-none cursor-default" : "py-8 px-5 cursor-pointer",
             isAnalyzing && "border-primary bg-primary-light cursor-wait",
             hasPlan && !isAnalyzing && "bg-white",
             !hasPlan && !isAnalyzing && "bg-slate-50 border-slate-300",
           )}
         >
           <input
+            ref={fileInputRef}
             type="file"
             id="floorPlanUpload"
             accept="image/*,image/heic,.heic,.pdf"
@@ -100,19 +115,27 @@ const FloorPlanStep: React.FC<WizardStepProps> = ({
                     )}
                   </div>
                 )}
-                {!isAnalyzing && (
-                  <div
-                    className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold z-20"
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "0")}
-                  >
-                    <div className="flex items-center gap-2 bg-black/60 py-2 px-4 rounded-full">
-                      <Upload size={16} />
-                      <span>Click to Replace</span>
-                    </div>
-                  </div>
-                )}
               </div>
+              {!isAnalyzing && (
+                <div className="flex items-center justify-center gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleReplace(); }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors"
+                  >
+                    <RefreshCw size={16} />
+                    Replace file
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemove(); }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 bg-white text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                    Remove
+                  </button>
+                </div>
+              )}
             </motion.div>
           ) : (
             <motion.div

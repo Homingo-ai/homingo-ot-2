@@ -186,6 +186,12 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
     setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
+  const handleClearFloorPlan = () => {
+    handleUpdateField("floorPlan", null);
+    handleUpdateField("floorPlanApproved", false);
+    setFloorPlanAnalysis(null);
+  };
+
   const handleSaveDraft = async () => {
     setIsSavingDraft(true);
     try {
@@ -689,6 +695,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 handlePhotoUpload={handlePhotoUpload}
                 isAnalyzing={isAnalyzing}
                 floorPlanAnalysis={floorPlanAnalysis}
+                onClearFloorPlan={handleClearFloorPlan}
               />
             )}
             {step === 4 && (

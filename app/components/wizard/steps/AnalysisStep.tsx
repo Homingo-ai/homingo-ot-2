@@ -52,7 +52,7 @@ const AnalysisStep: React.FC<WizardStepProps> = ({
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 w-full">
+            {/* <div className="grid grid-cols-2 gap-3 w-full">
               <div className="p-5 bg-white rounded-[20px] border border-border flex items-center gap-4 text-left">
                 <ClipboardCheck size={18} className="text-primary" />
                 <div>
@@ -75,7 +75,7 @@ const AnalysisStep: React.FC<WizardStepProps> = ({
                   </span>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             <div className="p-5 bg-slate-50 rounded-[20px] border border-slate-200 w-full text-left">
               <h4 className="text-xs font-extrabold text-slate-800 mb-3 uppercase">

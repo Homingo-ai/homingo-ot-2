@@ -21,6 +21,7 @@ import { Case } from "@/types/dashboard";
 import { ConfidenceBadge } from "../wizard/ConfidenceBadge";
 import { LEGEND, AccessibilityGrade } from "@/lib/accessibility/flowchart";
 import AccessibilityBadge from "@/app/components/common/AccessibilityBadge";
+import LahrAppendix from "./LahrAppendix";
 import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
 
@@ -1610,6 +1611,18 @@ const ReportView: React.FC<ReportViewProps> = ({
             uprn={rawAhr.meta_data?.uprn}
             accessibilityGrade={caseData.accessibilityGrade}
           />
+
+          {/* LAHR BAND (data-driven from business-rules.json). Hidden if no survey data. */}
+          {(caseData.mlData as any)?.wizardData ? (
+            <div className="mb-6">
+              <LahrAppendix
+                survey={(caseData.mlData as any).surveyRow ?? (caseData.mlData as any).wizardData}
+                annotations={(caseData.mlData as any).surveyAnnotations ?? []}
+                floorPlanUrl={(caseData.mlData as any).wizardData?.floorPlan}
+                evidenceUrls={caseData.evidence ?? []}
+              />
+            </div>
+          ) : null}
 
           {/* COMPLIANCE SUMMARY (Enterprise Feature) */}
           {(caseData.mlData as any)?.riskAssessment && (

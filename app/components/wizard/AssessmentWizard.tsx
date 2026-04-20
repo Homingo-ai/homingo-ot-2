@@ -62,11 +62,18 @@ import FacilitiesStep from "./steps/FacilitiesStep";
 import SafetyHazardsStep from "./steps/SafetyHazardsStep";
 import SmartCaptureStep from "./steps/SmartCaptureStep";
 import AnalysisStep from "./steps/AnalysisStep";
+import DynamicQuestionStep from "./steps/DynamicQuestionStep";
+
+// Detection v2 wiring
+import { isDetectionV2Enabled } from "@/lib/detection/client";
+import type { DetectionState } from "@/lib/detection/types";
+import { initWizardState } from "@/lib/wizard/questionEngine";
+import type { WizardState, AnswerValue } from "@/lib/wizard/questionGraph";
 
 import { Case } from "@/types/dashboard";
 import { cn } from "@/lib/utils/cn";
 
-const steps = [
+const V1_STEPS = [
   { id: 1, title: "Client", icon: <User size={18} /> },
   { id: 2, title: "Identical Units", icon: <Copy size={18} /> },
   { id: 3, title: "Plan", icon: <Upload size={18} /> },
@@ -76,6 +83,16 @@ const steps = [
   { id: 7, title: "Facilities", icon: <ChefHat size={18} /> },
   { id: 8, title: "Safety", icon: <ShieldAlert size={18} /> },
   { id: 9, title: "Analysis", icon: <Smartphone size={18} /> },
+];
+
+// Detection-v2: steps 5-8 collapse into one dynamic step driven by the question graph.
+const V2_STEPS = [
+  { id: 1, title: "Client", icon: <User size={18} /> },
+  { id: 2, title: "Identical Units", icon: <Copy size={18} /> },
+  { id: 3, title: "Plan", icon: <Upload size={18} /> },
+  { id: 4, title: "Capture", icon: <Camera size={18} /> },
+  { id: 5, title: "Follow-ups", icon: <Home size={18} /> },
+  { id: 6, title: "Analysis", icon: <Smartphone size={18} /> },
 ];
 
 interface AssessmentWizardProps {
@@ -180,6 +197,20 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
   );
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Detection v2: feature-flagged parallel path. Off-by-default via NEXT_PUBLIC_DETECTION_V2.
+  const v2Enabled = isDetectionV2Enabled();
+  const steps = v2Enabled ? V2_STEPS : V1_STEPS;
+  const totalSteps = steps.length;
+  const analysisStepIndex = totalSteps; // last step is always Analysis
+  const [detectionState, setDetectionState] = useState<DetectionState>({
+    floorPlans: [],
+    photos: [],
+  });
+  const [wizardState, setWizardState] = useState<WizardState>(() =>
+    initWizardState({ detection: { floorPlans: [], photos: [] } }),
+  );
+  const [isDetecting, setIsDetecting] = useState(false);
+
   const normalizeFacilityToken = (raw: unknown): string | null => {
     const text = String(raw ?? "")
       .trim()
@@ -267,6 +298,8 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
         setFormData(initialFormData);
         setStep(1);
       }
+      setDetectionState({ floorPlans: [], photos: [] });
+      setWizardState(initWizardState({ detection: { floorPlans: [], photos: [] } }));
       registerAllRules();
     }
   }, [isOpen, initialData]);
@@ -1006,6 +1039,65 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
     }
   };
 
+  // Detection v2: run CV stack against already-uploaded floor-plan + photo URLs.
+  // Fires when user advances from Smart Capture to follow-ups.
+  const runV2Detection = async () => {
+    if (!v2Enabled) return;
+    const planUrl: string | undefined = formData.floorPlan || undefined;
+    const categoryPhotos: Record<string, string[]> = formData.categoryPhotos || {};
+    const photoUrls = Object.values(categoryPhotos).flat().filter(Boolean);
+    setIsDetecting(true);
+    try {
+      const { detectByUrl } = await import("@/lib/detection/client");
+      const [planResult, photoResults] = await Promise.all([
+        planUrl
+          ? detectByUrl("floor_plan", planUrl, "floor-plan").catch(() => null)
+          : Promise.resolve(null),
+        Promise.all(
+          photoUrls.map((u, i) =>
+            detectByUrl("photo", u, `photo-${i}`).catch(() => null),
+          ),
+        ),
+      ]);
+      const next: DetectionState = {
+        floorPlans: planResult ? [planResult] : [],
+        photos: photoResults.filter((r): r is NonNullable<typeof r> => !!r),
+      };
+      setDetectionState(next);
+      setWizardState(
+        initWizardState({
+          detection: next,
+          known: {
+            property_type: formData.propertyType || null,
+            entrance_floor_level: formData.floorLevelNumber
+              ? Number(formData.floorLevelNumber)
+              : null,
+            has_internal_stairs:
+              formData.internalStairs === "Yes"
+                ? true
+                : formData.internalStairs === "No"
+                  ? false
+                  : null,
+          },
+        }),
+      );
+    } catch (err) {
+      console.error("Detection v2 error:", err);
+      toast.error("Detection service unavailable. Continuing in manual mode.");
+    } finally {
+      setIsDetecting(false);
+    }
+  };
+
+  const handleDynamicComplete = (fields: Record<string, AnswerValue>) => {
+    Object.entries(fields).forEach(([key, val]) => {
+      if (val === null || val === undefined) return;
+      handleUpdateField(key, val);
+    });
+    setStep(analysisStepIndex);
+    startAiAnalysis();
+  };
+
   const handleStep3PhotosChanged = (
     _updatedCategoryPhotos: Record<string, string[]>,
   ) => {
@@ -1016,16 +1108,18 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
   };
 
   const isNextDisabled = () => {
-    if (isProcessing || isAnalyzing) return true;
+    if (isProcessing || isAnalyzing || isDetecting) return true;
     if (step === 1)
       return !formData.fullName || !formData.street || !formData.postcode;
     // Step 2 (Section B) has no required fields
     if (step === 3) return !formData.floorPlan && !formData.hasNoFloorPlan;
     if (step === 4)
-      return (formData.photos || []).length < 1 || !step3AnalysisComplete; // Require photos AND analysis
-    if (step === 5) return !formData.propertyType || !formData.entranceLevel;
-    if (step === 6) return !formData.internalStairs;
-    if (step === 7) return !formData.bathroomLocation;
+      return (formData.photos || []).length < 1 || !step3AnalysisComplete;
+    // v2 flow uses DynamicQuestionStep's internal buttons for step 5 — hide global next.
+    if (v2Enabled && step === 5) return true;
+    if (!v2Enabled && step === 5) return !formData.propertyType || !formData.entranceLevel;
+    if (!v2Enabled && step === 6) return !formData.internalStairs;
+    if (!v2Enabled && step === 7) return !formData.bathroomLocation;
     return false;
   };
 
@@ -1294,7 +1388,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 onPhotosChanged={handleStep3PhotosChanged}
               />
             )}
-            {step === 5 && (
+            {!v2Enabled && step === 5 && (
               <PropertyAccessStep
                 key="s5"
                 formData={formData}
@@ -1303,7 +1397,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 aiSuggestions={aiSuggestions}
               />
             )}
-            {step === 6 && (
+            {!v2Enabled && step === 6 && (
               <InternalCirculationStep
                 key="s6"
                 formData={formData}
@@ -1312,7 +1406,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 aiSuggestions={aiSuggestions}
               />
             )}
-            {step === 7 && (
+            {!v2Enabled && step === 7 && (
               <FacilitiesStep
                 key="s7"
                 formData={formData}
@@ -1321,7 +1415,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 aiSuggestions={aiSuggestions}
               />
             )}
-            {step === 8 && (
+            {!v2Enabled && step === 8 && (
               <SafetyHazardsStep
                 key="s8"
                 formData={formData}
@@ -1330,9 +1424,17 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 aiSuggestions={aiSuggestions}
               />
             )}
-            {step === 9 && (
+            {v2Enabled && step === 5 && (
+              <DynamicQuestionStep
+                key="s5-dynamic"
+                state={wizardState}
+                onStateChange={setWizardState}
+                onComplete={handleDynamicComplete}
+              />
+            )}
+            {step === analysisStepIndex && (
               <AnalysisStep
-                key="s9"
+                key="s-final"
                 formData={formData}
                 handleUpdateField={handleUpdateField}
                 isAnalyzing={isAnalyzing}
@@ -1414,14 +1516,25 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
             <button
               disabled={isNextDisabled()}
               onClick={() => {
-                if (step === 9) {
+                if (step === analysisStepIndex) {
                   handleSafeClose();
-                } else if (step === 8) {
+                  return;
+                }
+                // v1: step 8 → analysis triggers Gemini report-fill.
+                if (!v2Enabled && step === 8) {
                   setStep(step + 1);
                   startAiAnalysis();
-                } else {
-                  setStep(step + 1);
+                  return;
                 }
+                // v2: step 4 → detection runs then advance to follow-ups.
+                if (v2Enabled && step === 4) {
+                  void (async () => {
+                    await runV2Detection();
+                    setStep(step + 1);
+                  })();
+                  return;
+                }
+                setStep(step + 1);
               }}
               className={cn(
                 "py-2 px-3 sm:py-2.5 sm:px-5 rounded-lg sm:rounded-xl border-none font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 transition-all shrink-0",
@@ -1431,10 +1544,18 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
               )}
             >
               <span className="hidden sm:inline">
-                {step === 9 ? "Complete Assessment" : step === 8 ? "Generate AI Report" : "Continue"}
+                {step === analysisStepIndex
+                  ? "Complete Assessment"
+                  : !v2Enabled && step === 8
+                    ? "Generate AI Report"
+                    : v2Enabled && step === 4 && isDetecting
+                      ? "Detecting..."
+                      : "Continue"}
               </span>
-              <span className="sm:hidden">{step === 9 ? "Complete" : step === 8 ? "Report" : "Next"}</span>
-              {step < 9 && <ChevronRight size={18} className="sm:w-5 sm:h-5 shrink-0" />}
+              <span className="sm:hidden">
+                {step === analysisStepIndex ? "Complete" : !v2Enabled && step === 8 ? "Report" : "Next"}
+              </span>
+              {step < analysisStepIndex && <ChevronRight size={18} className="sm:w-5 sm:h-5 shrink-0" />}
             </button>
           </div>
         </div>

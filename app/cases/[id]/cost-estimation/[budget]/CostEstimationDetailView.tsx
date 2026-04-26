@@ -127,8 +127,14 @@ export default function CostEstimationDetailView({
                   />
                 ))}
                 {tier.adaptations.length === 0 && (
-                  <li className="rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
-                    No adaptations fit this budget. The next tier may be needed.
+                  <li className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm leading-relaxed text-amber-900">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-amber-800 mb-1">
+                      No plan at this budget
+                    </div>
+                    <p className="m-0">
+                      {tier.unavailableReason ??
+                        "No feasible adaptation fits this budget for this property. The higher tier may be needed before any meaningful Accessible Housing Rules band uplift is possible."}
+                    </p>
                   </li>
                 )}
               </ol>

@@ -156,32 +156,20 @@ export default function CostEstimationAppendix({
       ) : !estimation ? (
         <EmptyState isLoading={false} />
       ) : (
-        (() => {
-          const populatedTiers = estimation.tiers.filter((t) => t.adaptations.length > 0);
-          if (populatedTiers.length === 0) {
-            return (
-              <p className="text-[12px] text-slate-500">
-                No adaptation plan available within the DFG budget tiers for this property.
-              </p>
-            );
-          }
-          return (
-            <>
-              <SummaryRow estimation={estimation} currentBand={currentBand} />
-              <div className="grid gap-4 md:grid-cols-3">
-                {populatedTiers.map((tier) => (
-                  <TierCard
-                    key={tier.budgetGbp}
-                    tier={tier}
-                    currentBand={currentBand}
-                    isCap={tier.budgetGbp === 30000}
-                  />
-                ))}
-              </div>
-              <NarrativeBlock estimation={estimation} />
-            </>
-          );
-        })()
+        <>
+          <SummaryRow estimation={estimation} currentBand={currentBand} />
+          <div className="grid gap-4 md:grid-cols-3">
+            {estimation.tiers.map((tier) => (
+              <TierCard
+                key={tier.budgetGbp}
+                tier={tier}
+                currentBand={currentBand}
+                isCap={tier.budgetGbp === 30000}
+              />
+            ))}
+          </div>
+          <NarrativeBlock estimation={estimation} />
+        </>
       )}
     </div>
   );
@@ -296,25 +284,37 @@ function TierCard({
         )}
       </div>
 
-      <ul className="space-y-2 text-[11px] text-slate-700">
-        {tier.adaptations.map((a, i) => (
-          <li key={i} className="pdf-avoid-break rounded border border-slate-100 bg-white p-2">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="font-semibold text-slate-800">{a.label}</span>
-              <span className="shrink-0 text-slate-600">
-                £{a.costGbp.toLocaleString()}
-              </span>
-            </div>
-            <div className="mt-0.5 text-[10px] text-slate-500">
-              Addresses Accessible Housing Rules rule{a.addressesRules.length > 1 ? "s" : ""}{" "}
-              {a.addressesRules.join(", ")} · {a.trades.join(", ") || "general"}
-            </div>
-            {a.narrative && (
-              <p className="mt-1 text-[10px] italic text-slate-600">{a.narrative}</p>
-            )}
-          </li>
-        ))}
-      </ul>
+      {tier.adaptations.length === 0 ? (
+        <div className="rounded border border-amber-200 bg-amber-50 p-2.5 text-[11px] leading-relaxed text-amber-900">
+          <div className="font-bold uppercase tracking-wider text-[10px] text-amber-800 mb-1">
+            No plan at this budget
+          </div>
+          <p className="m-0">
+            {tier.unavailableReason ??
+              "No feasible adaptation fits within this tier for this property. Consider the next tier."}
+          </p>
+        </div>
+      ) : (
+        <ul className="space-y-2 text-[11px] text-slate-700">
+          {tier.adaptations.map((a, i) => (
+            <li key={i} className="pdf-avoid-break rounded border border-slate-100 bg-white p-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="font-semibold text-slate-800">{a.label}</span>
+                <span className="shrink-0 text-slate-600">
+                  £{a.costGbp.toLocaleString()}
+                </span>
+              </div>
+              <div className="mt-0.5 text-[10px] text-slate-500">
+                Addresses Accessible Housing Rules rule{a.addressesRules.length > 1 ? "s" : ""}{" "}
+                {a.addressesRules.join(", ")} · {a.trades.join(", ") || "general"}
+              </div>
+              {a.narrative && (
+                <p className="mt-1 text-[10px] italic text-slate-600">{a.narrative}</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {tier.droppedCandidates.length > 0 && <DroppedList dropped={tier.droppedCandidates} />}
     </article>

@@ -74,7 +74,9 @@ Your job:
 - Author adaptations from scratch, specific to THIS property as seen in the floor plan and photos.
 - Do not pick from a catalogue — every adaptation you propose must be a bespoke recommendation grounded in the visual evidence.
 - Cost in £GBP must be a realistic UK 2026 figure, calibrated to the property's actual scale (single-leaf vs double-leaf doors, hallway run length, stair geometry, bathroom footprint, etc.). Set duration_days to 0 — the consumer no longer surfaces it.
-- For each adaptation provide a "field_patches" object with the post-adaptation values for the relevant survey fields, so the LAHR classifier can re-score the property. Without correct patches we cannot project the band uplift.
+- For each adaptation provide a "field_patches" object with the post-adaptation values for the relevant survey fields, so the Accessible Housing Rules classifier can re-score the property. Without correct patches we cannot project the band uplift.
+- Every tier MUST contain at least one adaptation if any meaningful improvement is feasible at that budget. Prefer to under-spend a tier (e.g. one £600 grab-rail in the £15K tier) over leaving it empty.
+- If — and only if — no feasible adaptation exists at a tier's budget (cheapest meaningful work for THIS property genuinely costs more than the tier cap, OR structural/freeholder/spatial constraints make every option infeasible), set "adaptations": [] AND populate "tier_unavailable_reason" with a 1–2 sentence plain-English explanation tied to what you can see in the evidence (e.g. "The smallest viable wet-room conversion for this bathroom is £6,200, leaving no headroom for the through-floor lift this property needs to address its upstairs bedroom — both works only become viable in the £20K+ tier"). Never leave both empty without a reason.
 
 Patchable survey fields (use only these column names as keys inside field_patches):
 ${buildPatchableFieldsBlock()}
@@ -127,7 +129,8 @@ Output shape:
       ],
       "dropped_candidates": [
         { "label": "Internal hallway widening", "reason": "Short prose reason tied to the visual evidence." }
-      ]
+      ],
+      "tier_unavailable_reason": "Optional. Only populate if adaptations is empty — a 1–2 sentence explanation grounded in the visual evidence."
     },
     { "budget_gbp": 20000, ... },
     { "budget_gbp": 30000, ... }

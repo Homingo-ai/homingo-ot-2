@@ -48,6 +48,7 @@ type PlanRow = {
   budget_cap_gbp: number;
   generated_at: string;
   dropped_candidates: DroppedAdaptation[] | null;
+  unavailable_reason: string | null;
 };
 
 type AdaptationRow = {
@@ -116,6 +117,7 @@ export async function loadCostEstimation(
         }),
       ),
       droppedCandidates: p.dropped_candidates ?? [],
+      unavailableReason: p.unavailable_reason ?? undefined,
     });
   }
 
@@ -188,6 +190,7 @@ export async function persistCostEstimation(
         budget_cap_gbp: estimation.budgetCapGbp,
         generated_at: estimation.generatedAt,
         dropped_candidates: tier.droppedCandidates,
+        unavailable_reason: tier.unavailableReason ?? null,
       })
       .select("id")
       .single();

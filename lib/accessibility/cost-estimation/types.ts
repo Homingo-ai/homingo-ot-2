@@ -32,6 +32,10 @@ export type TierPlan = {
   potentialBand: LahrBandId;
   adaptations: RemediationInstance[];
   droppedCandidates: DroppedAdaptation[];
+  /** When `adaptations` is empty, a plain-English explanation of why no plan exists for this
+   *  tier (insufficient budget, structural infeasibility, etc.). Surfaced to the OT instead of
+   *  hiding the tier. */
+  unavailableReason?: string;
 };
 
 export type CostEstimation = {

@@ -30,10 +30,9 @@ import type { Database } from "@/types/supabase";
 type SurveyRow = Database["public"]["Tables"]["surveys"]["Row"];
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-// Pro produces richer narratives. Safe to use here because the route is now async — POST
-// returns 202 immediately and the Gemini call runs in the background via `after()`, so the
-// 30-60s response time no longer triggers gateway timeouts. Override via GEMINI_COST_MODEL.
-const GEMINI_MODEL = process.env.GEMINI_COST_MODEL || "gemini-2.5-pro";
+// Flash returns ~5-10s vs ~30s for Pro, with comparable quality on this structured prompt.
+// Override via GEMINI_COST_MODEL if you want to test Pro again.
+const GEMINI_MODEL = process.env.GEMINI_COST_MODEL || "gemini-2.5-flash";
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const MAX_PHOTO_INPUTS = 3;
 const DIFFICULTIES: Difficulty[] = ["minor", "moderate", "major"];
@@ -67,6 +66,9 @@ type GeminiTier = {
   potential_band_estimate?: LahrBandId;
   adaptations?: GeminiAdaptation[];
   dropped_candidates?: { label?: string; reason?: string }[];
+  /** Plain-English explanation Gemini emits when no feasible bundle fits the tier (e.g. cheapest
+   *  meaningful adaptation costs more than the tier cap). */
+  tier_unavailable_reason?: string;
 };
 
 type GeminiPayload = {
@@ -304,7 +306,7 @@ function buildTier(args: {
   survey: Partial<SurveyRow>;
 }): TierPlan {
   const { budget, geminiTier, survey } = args;
-  const fallback = (potentialBand: LahrBandId): TierPlan => ({
+  const fallback = (potentialBand: LahrBandId, reason: string): TierPlan => ({
     budgetGbp: budget,
     totalCostGbp: 0,
     totalDurationDays: 0,
@@ -312,6 +314,7 @@ function buildTier(args: {
     potentialBand,
     adaptations: [],
     droppedCandidates: [],
+    unavailableReason: reason,
   });
 
   const currentBand = classifyLahr(survey).band;
@@ -320,7 +323,10 @@ function buildTier(args: {
       hadGeminiTier: !!geminiTier,
       adaptationCount: geminiTier?.adaptations?.length ?? 0,
     });
-    return fallback(currentBand);
+    const reason =
+      geminiTier?.tier_unavailable_reason ||
+      `The estimator did not propose any feasible adaptation that fits within £${budget.toLocaleString()}. The cheapest meaningful work for this property exceeds this tier — the higher tier is needed.`;
+    return fallback(currentBand, reason);
   }
 
   const adaptations: RemediationInstance[] = [];
@@ -374,7 +380,19 @@ function buildTier(args: {
       currentBand,
       projectedBand,
     });
-    return fallback(currentBand);
+    return fallback(
+      currentBand,
+      `The proposed bundle for £${budget.toLocaleString()} did not produce a measurable Accessible Housing Rules band uplift, so it has been suppressed. Consider the higher tier.`,
+    );
+  }
+
+  // The model returned adaptations but every one of them was dropped by the budget cap.
+  if (adaptations.length === 0) {
+    return fallback(
+      currentBand,
+      geminiTier.tier_unavailable_reason ||
+        `Every adaptation the estimator proposed for £${budget.toLocaleString()} was priced over the tier cap. The smallest feasible work for this property starts above this budget — the higher tier is needed.`,
+    );
   }
 
   const dropped = Array.isArray(geminiTier.dropped_candidates)

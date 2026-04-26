@@ -159,31 +159,16 @@ export default function CostEstimationRows({
       ) : !estimation ? (
         <EmptyState isLoading={false} />
       ) : (
-        (() => {
-          const populatedTiers = estimation.tiers.filter(
-            (t) => t.adaptations.length > 0,
-          );
-          if (populatedTiers.length === 0) {
-            return (
-              <p className="text-[12px] text-slate-500">
-                No adaptation plan available within the DFG budget tiers for
-                this property.
-              </p>
-            );
-          }
-          return (
-            <ul className="space-y-2">
-              {populatedTiers.map((tier) => (
-                <TierRow
-                  key={tier.budgetGbp}
-                  tier={tier}
-                  currentBand={currentBand}
-                  surveyId={surveyId}
-                />
-              ))}
-            </ul>
-          );
-        })()
+        <ul className="space-y-2">
+          {estimation.tiers.map((tier) => (
+            <TierRow
+              key={tier.budgetGbp}
+              tier={tier}
+              currentBand={currentBand}
+              surveyId={surveyId}
+            />
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -293,10 +278,22 @@ function TierRow({
         {/* Summary / CTA */}
         <div className="flex-1 min-w-0">
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            Adaptations
+            {tier.adaptations.length === 0 ? "No plan at this budget" : "Adaptations"}
           </div>
-          <div className="text-sm text-slate-700 truncate">
-            {`${tier.adaptations.length} · ${tier.adaptations.map((a) => a.label).join(", ")}`}
+          <div
+            className={`text-sm truncate ${
+              tier.adaptations.length === 0 ? "text-amber-800" : "text-slate-700"
+            }`}
+            title={
+              tier.adaptations.length === 0
+                ? tier.unavailableReason ?? undefined
+                : undefined
+            }
+          >
+            {tier.adaptations.length === 0
+              ? tier.unavailableReason ??
+                "No feasible adaptation fits this budget — see the next tier."
+              : `${tier.adaptations.length} · ${tier.adaptations.map((a) => a.label).join(", ")}`}
           </div>
         </div>
 

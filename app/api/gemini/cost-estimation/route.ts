@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { classifyLahr } from "@/lib/accessibility/lahr/classifier";
 import {
   aggregateDifficulty,
+  applyPatchesToSurvey,
   projectBandAfter,
 } from "@/lib/accessibility/cost-estimation/planner";
 import {
@@ -407,6 +408,36 @@ function buildTier(args: {
     return fallback(
       currentBand,
       `The proposed bundle for £${budget.toLocaleString()} did not produce a measurable Accessible Housing Rules band uplift, so it has been suppressed. Consider the higher tier.`,
+    );
+  }
+
+  // Diagnostic: when the model's patches don't actually move the band, surface why so we can
+  // tighten the prompt's recipe block. This prints the rules still capping the band after the
+  // patches were applied, so it's visible in the server console exactly which rules slipped
+  // through.
+  if (
+    adaptations.length > 0 &&
+    rankOf(projectedBand) === rankOf(currentBand) &&
+    currentBand !== "A"
+  ) {
+    const patched = applyPatchesToSurvey(survey, adaptations);
+    const stillTriggering = classifyLahr(patched).criteria
+      .filter((c) => c.triggeredRules.length > 0 && c.id !== "g_rules")
+      .map((c) => ({
+        section: c.label,
+        cap: c.cappedBand,
+        rules: c.triggeredRules.map((r) => r.n),
+      }));
+    console.warn(
+      `[cost-estimation] buildTier(${budget}): adaptations applied but band did not improve` +
+        ` — patches missed at least one capping rule.`,
+      {
+        currentBand,
+        projectedBand,
+        accepted: adaptations.length,
+        patchedKeys: adaptations.flatMap((a) => Object.keys(a.fieldPatches ?? {})),
+        stillTriggering,
+      },
     );
   }
 

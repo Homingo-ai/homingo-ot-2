@@ -1,6 +1,7 @@
 import type { LahrBandId, LahrEvaluation } from "@/lib/accessibility/lahr/types";
 import type { DfgBudgetGbp } from "@/lib/accessibility/cost-estimation/types";
 import fieldMapping from "@/lib/accessibility/lahr/tables/field-mapping.json";
+import { buildResolutionsBlock } from "@/lib/accessibility/cost-estimation/ruleRecipes";
 
 type TriggeredRule = {
   sectionId: string;
@@ -49,14 +50,10 @@ export function buildCostEstimationPrompt(args: {
 }): string {
   const { currentBand, triggeredRules, budgets } = args;
 
-  const rulesBlock = triggeredRules.length
-    ? triggeredRules
-        .map(
-          (r) =>
-            `  - Rule #${r.n} (section "${r.sectionLabel}", caps at ${r.capBand}): ${r.description}`,
-        )
-        .join("\n")
-    : "  (none)";
+  // For every triggered rule we attach the minimum field-patch recipe(s) that resolve it.
+  // Without these the model frequently emits patches that don't actually flip the rule (e.g.
+  // toggles a boolean but forgets the related dimensions), so the projected band stays stuck.
+  const rulesBlock = buildResolutionsBlock(triggeredRules);
 
   return `Role: You are a chartered UK home-adaptation surveyor writing for an Occupational Therapist who will commission a DFG (Disabled Facilities Grant) package for this dwelling.
 
@@ -67,14 +64,14 @@ Context:
 - The property has been assessed against the LAHR (Local Authority Housing Register) 110-rule framework. The current LAHR band is **${currentBand}**.
 - Because band ≠ A, propose, for each budget tier, the bundle of adaptations that best lifts the band within that tier's cap.
 
-Triggered LAHR rules (what currently caps the band):
+Triggered Accessible Housing Rules (what currently caps the band, with the EXACT field_patches required to resolve each):
 ${rulesBlock}
 
 Your job:
-- Author adaptations from scratch, specific to THIS property as seen in the floor plan and photos.
-- Do not pick from a catalogue — every adaptation you propose must be a bespoke recommendation grounded in the visual evidence.
+- Author adaptations specific to THIS property as seen in the floor plan and photos. Bespoke labels and narratives — not catalogue copy.
 - Cost in £GBP must be a realistic UK 2026 figure, calibrated to the property's actual scale (single-leaf vs double-leaf doors, hallway run length, stair geometry, bathroom footprint, etc.). Set duration_days to 0 — the consumer no longer surfaces it.
-- For each adaptation provide a "field_patches" object with the post-adaptation values for the relevant survey fields, so the Accessible Housing Rules classifier can re-score the property. Without correct patches we cannot project the band uplift.
+- **Critical for band uplift**: for each adaptation, the "field_patches" object MUST include every key from the recipe(s) of the rules that adaptation claims to address. Patching only one boolean (e.g. has_property_ramp:true without the gradient values) will leave the rule still triggering and the band will not move. Use the recipe map above as the floor — you may add extra related fields, but never fewer.
+- An adaptation that does not push at least one triggered rule below its cap is useless. Skip it.
 - Every tier MUST contain at least one adaptation if any meaningful improvement is feasible at that budget. Prefer to under-spend a tier (e.g. one £600 grab-rail in the £15K tier) over leaving it empty.
 - If — and only if — no feasible adaptation exists at a tier's budget (cheapest meaningful work for THIS property genuinely costs more than the tier cap, OR structural/freeholder/spatial constraints make every option infeasible), set "adaptations": [] AND populate "tier_unavailable_reason" with a 1–2 sentence plain-English explanation tied to what you can see in the evidence (e.g. "The smallest viable wet-room conversion for this bathroom is £6,200, leaving no headroom for the through-floor lift this property needs to address its upstairs bedroom — both works only become viable in the £20K+ tier"). Never leave both empty without a reason.
 

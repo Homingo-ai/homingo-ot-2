@@ -28,9 +28,9 @@ const Header: React.FC<HeaderProps> = ({ user, onOpenWizard, onSearch }) => {
     <header className="min-h-16 md:h-20 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 md:px-8 py-3 sticky top-0 z-[100] border-b border-[var(--glass-border)] bg-white">
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <img
-          src="/logo.png"
+          src="/login-logo.png"
           alt="AccessCheck"
-          className="h-9 sm:h-[45px] cursor-pointer"
+          className="h-9 sm:h-[72px] cursor-pointer"
         />
       </div>
 

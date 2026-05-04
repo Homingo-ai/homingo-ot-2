@@ -49,7 +49,7 @@ export default function Hero() {
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link href="/solutions">See how it works</Link>
+              <Link href="/solutions/floor-plan-analysis">See how it works</Link>
             </Button>
           </div>
           <p className="mt-6 text-xs text-[var(--text-dim)]">

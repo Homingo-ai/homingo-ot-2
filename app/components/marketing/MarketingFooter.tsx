@@ -74,14 +74,14 @@ export default function MarketingFooter() {
                     <p className="text-sm font-semibold">
                       A service by Foundations
                     </p>
-                    <p className="text-xs text-white/80">
+                    <p className="text-xs text-white/80 mt-2">
                       Powered by
                       <Image
-                        src="/assets/media/homingo-logo.png"
-                        alt="Homingo"
+                        src="/assets/media/rightision-logo.png"
+                        alt="Rightision"
                         width={50}
                         height={50}
-                        className="h-8 w-auto ml-2"
+                        className="h-6 w-auto ml-2"
                       />
                     </p>
                   </div>
@@ -92,7 +92,7 @@ export default function MarketingFooter() {
                   for home improvement agencies in England.
                 </p>
                 <a
-                  href="https://www.linkedin.com/company/homingo-co-uk/posts/?feedView=all"
+                  href="https://www.linkedin.com/company/rightision/posts/?feedView=all"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="AccessCheck on LinkedIn"

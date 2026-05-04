@@ -781,7 +781,7 @@ const CaseDetailView: React.FC<CaseDetailViewProps> = ({
                       className="w-full max-h-[320px] object-contain rounded-lg"
                     />
                     <p className="mt-2 text-[11px] text-center text-slate-500 font-semibold">
-                      Homingo AI Vision: Spatial Mapping Applied (M4 Compliance
+                      Rightision AI Vision: Spatial Mapping Applied (M4 Compliance
                       Verified)
                     </p>
                   </div>

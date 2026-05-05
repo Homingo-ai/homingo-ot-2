@@ -77,11 +77,11 @@ export default function MarketingFooter() {
                     <p className="text-xs text-white/80 mt-2">
                       Powered by
                       <Image
-                        src="/assets/media/rightision-logo.png"
+                        src="/assets/media/rightision-bw-logo.svg"
                         alt="Rightision"
                         width={50}
                         height={50}
-                        className="h-6 w-auto ml-2"
+                        className="h-5 w-auto ml-2 brightness-0 invert"
                       />
                     </p>
                   </div>

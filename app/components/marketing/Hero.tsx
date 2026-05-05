@@ -1,8 +1,8 @@
 import Link from "next/link";
-import Image from "next/image";
 
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import HeroVideo from "@/app/components/marketing/HeroVideo";
 
 export default function Hero() {
   return (
@@ -49,18 +49,14 @@ export default function Hero() {
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link href="/solutions/floor-plan-analysis">See how it works</Link>
+              <Link href="/demo">Try demo</Link>
             </Button>
           </div>
           <p className="mt-6 text-xs text-[var(--text-dim)]">
-            By Foundations · Powered by
-            <Image
-              src="/assets/media/rightision-logo.png"
-              alt="Rightision"
-              width={50}
-              height={50}
-              className="h-8 w-auto ml-2"
-            />
+            By Foundations · Powered by{" "}
+            <span className="font-semibold text-[var(--text-main)]">
+              Rightision
+            </span>
           </p>
         </div>
 
@@ -68,21 +64,7 @@ export default function Hero() {
           <div className="visual-card relative rounded-2xl overflow-hidden border border-[var(--border)] shadow-xl bg-[var(--bg-surface)] transition-transform duration-300 hover:-translate-y-1">
             {/* hero-image (drop a real photo at /public/assets/media/hero-home.jpg) */}
 
-            <div
-              role="img"
-              aria-label="A modern living room being analysed by AccessCheck"
-              className="aspect-[4/3] bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.45) 100%), url('/assets/media/hero_bg-B3Bwin3-.jpg')",
-                backgroundColor: "var(--bg-surface)",
-              }}
-            />
-
-            {/* AI scanning overlay */}
-            <div className="ac-scan-overlay" aria-hidden="true">
-              <div className="ac-scan-line" />
-            </div>
+            <HeroVideo />
 
             {/* Top-left live badge */}
             <div className="absolute top-4 left-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur border border-white/60 shadow-sm">

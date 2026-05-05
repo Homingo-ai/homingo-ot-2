@@ -20,7 +20,7 @@ export default function SolutionPage({
   body,
   hero,
   primaryCta = { label: "Login to start", href: "/login" },
-  secondaryCta = { label: "Talk to us", href: "/contact" },
+  secondaryCta = { label: "Try the demo", href: "/demo" },
 }: SolutionPageProps) {
   return (
     <>

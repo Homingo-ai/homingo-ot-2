@@ -32,7 +32,6 @@ import type { LahrBandId } from "@/lib/accessibility/lahr/types";
 import type { CostEstimation } from "@/lib/accessibility/cost-estimation/types";
 import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
-import Image from "next/image";
 
 interface ReportViewProps {
   caseData: Case;
@@ -90,13 +89,7 @@ const AHR_Header = ({
           </p>
           <p className="text-[10px] font-medium text-slate-400 mt-0.5 tracking-wide">
             Powered by{" "}
-            <Image
-              src="/assets/media/rightision-logo.png"
-              alt="Rightision"
-              width={50}
-              height={50}
-              className="h-8 w-auto ml-2"
-            />
+            <span className="font-semibold text-slate-500">Rightision</span>
           </p>
         </div>
       </div>

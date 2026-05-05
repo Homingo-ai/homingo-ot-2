@@ -154,7 +154,7 @@ export default function AccessCheckMotionExplainer() {
 
         {/* Right Side: Interactive Visuals Container */}
         <div
-          className="w-full lg:w-7/12 aspect-square md:aspect-[4/3] lg:aspect-auto lg:h-[700px] relative rounded-[2.5rem] bg-white shadow-[0_30px_60px_-20px_rgba(0,0,0,0.08)] border border-gray-100 overflow-hidden flex items-center justify-center p-4 sm:p-8"
+          className="w-full lg:w-7/12  md:aspect-[4/3] lg:aspect-auto lg:h-[700px] relative rounded-[2.5rem] bg-white shadow-[0_30px_60px_-20px_rgba(0,0,0,0.08)] border border-gray-100 overflow-hidden flex items-center justify-center p-4 sm:p-8"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >

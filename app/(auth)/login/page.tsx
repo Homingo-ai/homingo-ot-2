@@ -4,7 +4,6 @@ import { User, Lock, ArrowRight, Loader } from "lucide-react";
 import { motion } from "framer-motion";
 import { signIn, signUp } from "@/lib/auth/actions";
 import { redirect } from "next/navigation";
-import Image from "next/image";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -113,13 +112,7 @@ const LoginPage = () => {
         <div className="mt-8 text-center space-y-1">
           <p className="text-slate-400 text-[10px] tracking-wide">
             Powered by{" "}
-            <Image
-              src="/assets/media/rightision-logo.png"
-              alt="Rightision"
-              width={50}
-              height={50}
-              className="h-8 ml-2 w-auto"
-            />
+            <span className="font-semibold text-slate-500">Rightision</span>
           </p>
         </div>
       </motion.div>

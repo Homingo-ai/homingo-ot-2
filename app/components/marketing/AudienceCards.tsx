@@ -73,13 +73,22 @@ export default function AudienceCards() {
                   </li>
                 ))}
               </ul>
-              <Link
-                href={c.cta.href}
-                className="mt-7 inline-flex items-center justify-center gap-2 min-h-12 px-6 rounded-lg bg-[var(--primary)] text-white font-semibold hover:bg-[var(--primary-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-dark)] focus-visible:ring-offset-2"
-              >
-                {c.cta.label}
-                <ArrowRight size={18} aria-hidden="true" />
-              </Link>
+              <div className="mt-7 flex flex-col items-start gap-3">
+                <Link
+                  href={c.cta.href}
+                  className="inline-flex items-center justify-center gap-2 min-h-12 px-6 rounded-lg bg-[var(--primary)] text-white font-semibold hover:bg-[var(--primary-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-dark)] focus-visible:ring-offset-2"
+                >
+                  {c.cta.label}
+                  <ArrowRight size={18} aria-hidden="true" />
+                </Link>
+                <Link
+                  href="/demo"
+                  className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--primary-dark)] hover:underline focus-visible:outline-none focus-visible:underline"
+                >
+                  Or try the interactive demo
+                  <ArrowRight size={14} aria-hidden="true" />
+                </Link>
+              </div>
             </article>
           ))}
         </div>

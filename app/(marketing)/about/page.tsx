@@ -1,5 +1,3 @@
-import Image from "next/image";
-
 export const metadata = {
   title: "About",
   description:
@@ -17,14 +15,8 @@ export default function AboutPage() {
           <h1 className="mt-3 text-4xl sm:text-5xl font-extrabold tracking-tight text-[var(--text-main)]">
             A service by Foundations,
             <p className="mt-2">
-              Powered by
-              <Image
-                src="/assets/media/rightision-logo.png"
-                alt="Rightision"
-                width={50}
-                height={50}
-                className="h-12 w-auto ml-2"
-              />
+              Powered by{" "}
+              <span className="text-[var(--primary-dark)]">Rightision</span>
             </p>
           </h1>
           <h2 className="text-3xl">

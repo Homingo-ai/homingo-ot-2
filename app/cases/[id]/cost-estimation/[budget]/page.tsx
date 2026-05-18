@@ -9,6 +9,8 @@ import {
 import { loadCostEstimation } from "@/lib/accessibility/cost-estimation/repository";
 import CostEstimationDetailView from "./CostEstimationDetailView";
 import businessRules from "@/lib/accessibility/lahr/tables/business-rules.json";
+import { mapSurveyToCase } from "@/lib/surveys/mapper";
+import { buildSurveyData } from "@/lib/surveys/buildSurveyData";
 
 type RuleRef = { n: number; cap_band: string; description: string };
 
@@ -46,7 +48,19 @@ export default async function CostEstimationDetailPage({
   if (error || !survey) notFound();
 
   const costEstimation = await loadCostEstimation(supabase, surveyId);
-  const evaluation = classifyLahr(survey);
+
+  // Mirror the case detail page: rebuild the survey row from wizard/override/rawAhr data so
+  // that user overrides stored in raw_ai_data are applied before classifying. Calling
+  // classifyLahr(survey) on the raw DB row skips those overrides and gives a stale band.
+  const caseData = mapSurveyToCase(survey);
+  const surveyRow = buildSurveyData(
+    caseData.mlData?.wizardData || {},
+    (caseData.mlData as any)?.userOverrides || {},
+    (caseData.mlData as any)?.rawAhr || {},
+    caseData,
+    "",
+  );
+  const evaluation = classifyLahr(surveyRow);
 
   const tier = costEstimation?.tiers.find((t) => t.budgetGbp === tierBudget) ?? null;
 

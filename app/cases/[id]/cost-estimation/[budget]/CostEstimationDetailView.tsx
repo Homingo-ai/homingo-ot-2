@@ -207,13 +207,20 @@ function HeadlineStrip({
         <div className="mt-1 flex items-center gap-2">
           <span
             className="inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-bold text-white"
+            style={{ backgroundColor: LAHR_BAND_BY_ID[currentBand].color }}
+          >
+            {currentBand}
+          </span>
+          <span className="text-slate-400">→</span>
+          <span
+            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-bold text-white"
             style={{ backgroundColor: bandColor }}
           >
             {tier.potentialBand}
           </span>
           {uplifted ? (
             <span className="text-[11px] font-semibold text-emerald-700">
-              ↑ from {currentBand}
+              ↑ improved
             </span>
           ) : (
             <span className="text-[11px] text-slate-400">unchanged</span>

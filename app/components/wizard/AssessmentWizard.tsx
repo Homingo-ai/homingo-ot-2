@@ -195,16 +195,26 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
       .replace(/[_/()-]+/g, " ")
       .replace(/\s+/g, " ");
     if (!text) return null;
-    if (text.includes("master bedroom") || text.includes("bedroom 1") || text === "bed 1")
+    if (
+      text.includes("master bedroom") ||
+      text.includes("bedroom 1") ||
+      text === "bed 1"
+    )
       return "bed_1";
     if (text.includes("bedroom 2") || text === "bed 2") return "bed_2";
     if (text.includes("bedroom 3") || text === "bed 3") return "bed_3";
     if (text.includes("en suite")) return "combined_bath_toilet";
-    if (text.includes("combined") && text.includes("bath")) return "combined_bath_toilet";
+    if (text.includes("combined") && text.includes("bath"))
+      return "combined_bath_toilet";
     if (text.includes("bathroom")) return "bathroom_no_toilet";
-    if (text.includes("separate toilet") || text.includes("separate wc") || text === "wc")
+    if (
+      text.includes("separate toilet") ||
+      text.includes("separate wc") ||
+      text === "wc"
+    )
       return "separate_toilet";
-    if (text.includes("living") || text.includes("dining")) return "living_room";
+    if (text.includes("living") || text.includes("dining"))
+      return "living_room";
     if (text.includes("kitchen")) return "kitchen";
     if (text.includes("other")) return "other";
     return null;
@@ -371,7 +381,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
 
     try {
       const files = await Promise.all(
-        rawFiles.map((f) => convertHeicToJpegIfNeeded(f))
+        rawFiles.map((f) => convertHeicToJpegIfNeeded(f)),
       );
 
       /** Read a File into a base64 data URL */
@@ -410,13 +420,23 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
           if (detected && result) {
             setFloorPlanAnalysis(result);
             setFloorPlanDetection(detected.raw);
-            handleUpdateField("floorPlanApproved", result.is_floor_plan !== false);
+            handleUpdateField(
+              "floorPlanApproved",
+              result.is_floor_plan !== false,
+            );
             if (result.bedroom_count?.value !== undefined)
               handleUpdateField("bedrooms", Number(result.bedroom_count.value));
             if (result.section_measurements) {
               const m = result.section_measurements;
-              const setWidth = (field: string, cm: number | null | undefined) => {
-                if (cm !== null && cm !== undefined && Number.isFinite(Number(cm))) {
+              const setWidth = (
+                field: string,
+                cm: number | null | undefined,
+              ) => {
+                if (
+                  cm !== null &&
+                  cm !== undefined &&
+                  Number.isFinite(Number(cm))
+                ) {
                   handleUpdateField(field, String(cm));
                 }
               };
@@ -426,11 +446,23 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
               setWidth("doorBed2Width", m.door_opening_width_bed_2_cm);
               setWidth("doorBed3Width", m.door_opening_width_bed_3_cm);
               setWidth("doorBathroomWidth", m.door_opening_width_bathroom_cm);
-              setWidth("doorToiletWidth", m.door_opening_width_separate_toilet_cm);
+              setWidth(
+                "doorToiletWidth",
+                m.door_opening_width_separate_toilet_cm,
+              );
               setWidth("doorBalconyWidth", m.door_opening_width_balcony_cm);
-              setWidth("communalDoorWidth", m.communal_front_door_opening_width_cm);
-              setWidth("propertyDoorWidth", m.property_front_door_opening_width_cm);
-              setWidth("communalLiftDoorWidth", m.communal_lift_door_opening_width_cm);
+              setWidth(
+                "communalDoorWidth",
+                m.communal_front_door_opening_width_cm,
+              );
+              setWidth(
+                "propertyDoorWidth",
+                m.property_front_door_opening_width_cm,
+              );
+              setWidth(
+                "communalLiftDoorWidth",
+                m.communal_lift_door_opening_width_cm,
+              );
               setWidth("secondExitWidth", m.second_exit_door_opening_width_cm);
             }
             if (result.entrance_level) {
@@ -448,31 +480,58 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
               );
             // New floor plan fields
             if (result.floor_level_number)
-              handleUpdateField("floorLevelNumber", String(result.floor_level_number));
+              handleUpdateField(
+                "floorLevelNumber",
+                String(result.floor_level_number),
+              );
             if (result.stair_geometry) {
               const normalizedStairGeometry = normalizeStairGeometry(
                 result.stair_geometry,
               );
               if (normalizedStairGeometry) {
-                handleUpdateField("internalStairsType", normalizedStairGeometry);
+                handleUpdateField(
+                  "internalStairsType",
+                  normalizedStairGeometry,
+                );
               }
             }
             if (result.external_access) {
-              handleUpdateField("gardenAccess", result.external_access.garden_present ? "Yes" : "No");
-              handleUpdateField("balconyPresent", result.external_access.balcony_present ? "Yes" : "No");
-              handleUpdateField("parkingPresent", result.external_access.parking_present ? "Yes" : "No");
+              handleUpdateField(
+                "gardenAccess",
+                result.external_access.garden_present ? "Yes" : "No",
+              );
+              handleUpdateField(
+                "balconyPresent",
+                result.external_access.balcony_present ? "Yes" : "No",
+              );
+              handleUpdateField(
+                "parkingPresent",
+                result.external_access.parking_present ? "Yes" : "No",
+              );
             }
             if (result.second_exit) {
-              handleUpdateField("secondExit", result.second_exit.detected ? "Yes" : "No");
+              handleUpdateField(
+                "secondExit",
+                result.second_exit.detected ? "Yes" : "No",
+              );
             }
             if (result.lift?.detected !== undefined) {
-              const normalizedLift = normalizeCommunalLiftOption(result.lift.detected);
-              if (normalizedLift) handleUpdateField("communalLifts", normalizedLift);
+              const normalizedLift = normalizeCommunalLiftOption(
+                result.lift.detected,
+              );
+              if (normalizedLift)
+                handleUpdateField("communalLifts", normalizedLift);
             }
             // Communal
             if (result.communal) {
-              handleUpdateField("communalDoorPresent", result.communal.communal_door_present ? "Y" : "N");
-              handleUpdateField("communalLiftCount", String(result.communal.communal_lift_count ?? 0));
+              handleUpdateField(
+                "communalDoorPresent",
+                result.communal.communal_door_present ? "Y" : "N",
+              );
+              handleUpdateField(
+                "communalLiftCount",
+                String(result.communal.communal_lift_count ?? 0),
+              );
             }
             // Facilities per floor
             if (result.facilities_per_floor) {
@@ -489,7 +548,8 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
               handleUpdateField("facilitiesAboveLevel", normalizedAbove);
               handleUpdateField("facilitiesBelowLevel", normalizedBelow);
               const derivedBathroomLocation = deriveBathroomLocation({
-                accessFacilities: result.facilities_per_floor.access_level ?? [],
+                accessFacilities:
+                  result.facilities_per_floor.access_level ?? [],
                 aboveFacilities: result.facilities_per_floor.above ?? [],
                 belowFacilities: result.facilities_per_floor.below ?? [],
                 floorLevelNumber: result.floor_level_number,
@@ -502,14 +562,18 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
             setFloorPlanAnalysis(null);
             setFloorPlanDetection(null);
             handleUpdateField("floorPlanApproved", false);
-            toast.warning("Detection service unavailable — fill fields manually.");
+            toast.warning(
+              "Detection service unavailable — fill fields manually.",
+            );
           }
         } catch (err) {
           console.error("Floor plan analysis error:", err);
           setFloorPlanAnalysis(null);
           setFloorPlanDetection(null);
           handleUpdateField("floorPlanApproved", false);
-          toast.warning("Detection service unavailable — fill fields manually.");
+          toast.warning(
+            "Detection service unavailable — fill fields manually.",
+          );
         }
         e.target.value = "";
         return;
@@ -584,7 +648,8 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
   const startStep3BatchAnalysis = async (
     overrideCategoryPhotos?: Record<string, string[]>,
   ) => {
-    const categoryPhotos = overrideCategoryPhotos || formData.categoryPhotos || {};
+    const categoryPhotos =
+      overrideCategoryPhotos || formData.categoryPhotos || {};
     if (Object.keys(categoryPhotos).length === 0) return;
 
     setIsAnalyzing(true);
@@ -625,19 +690,27 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
           Object.assign(newSuggestions, result.safety);
         }
         // Normalize AI values so they match exact wizard option labels
-        const normalizedPropertyType = normalizePropertyType(newSuggestions.property_type);
+        const normalizedPropertyType = normalizePropertyType(
+          newSuggestions.property_type,
+        );
         if (normalizedPropertyType) {
           newSuggestions.property_type = normalizedPropertyType;
         }
-        const normalizedEntrance = normalizeEntranceLevel(newSuggestions.entrance_level);
+        const normalizedEntrance = normalizeEntranceLevel(
+          newSuggestions.entrance_level,
+        );
         if (normalizedEntrance) {
           newSuggestions.entrance_level = normalizedEntrance;
         }
-        const normalizedBathingType = normalizeBathingType(newSuggestions.bathing_type);
+        const normalizedBathingType = normalizeBathingType(
+          newSuggestions.bathing_type,
+        );
         if (normalizedBathingType) {
           newSuggestions.bathing_type = normalizedBathingType;
         }
-        const normalizedToiletType = normalizeToiletType(newSuggestions.toilet_type);
+        const normalizedToiletType = normalizeToiletType(
+          newSuggestions.toilet_type,
+        );
         if (normalizedToiletType) {
           newSuggestions.toilet_type = normalizedToiletType;
         }
@@ -647,11 +720,15 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
         if (normalizedBathroomLocation) {
           newSuggestions.bathroom_location = normalizedBathroomLocation;
         }
-        const normalizedStairGeometry = normalizeStairGeometry(newSuggestions.stair_type);
+        const normalizedStairGeometry = normalizeStairGeometry(
+          newSuggestions.stair_type,
+        );
         if (normalizedStairGeometry) {
           newSuggestions.stair_type = normalizedStairGeometry;
         }
-        const normalizedHandrails = normalizeHandrailSide(newSuggestions.handrails);
+        const normalizedHandrails = normalizeHandrailSide(
+          newSuggestions.handrails,
+        );
         if (normalizedHandrails) {
           newSuggestions.handrails = normalizedHandrails;
         }
@@ -694,7 +771,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
             description: "Please check the highlighted categories.",
           });
         } else if (!stopReason) {
-          toast.success("All photos analyzed successfully!");
+          toast.success("All photos analysed successfully!");
         }
 
         // Auto-fill logic (Batch)
@@ -726,32 +803,66 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
         ) {
           updates.bedrooms = Number(newSuggestions.bedroom_count);
         }
-        if (newSuggestions.turning_circle !== undefined && !formData.bathroomTurning150)
-          updates.bathroomTurning150 = newSuggestions.turning_circle ? "Y" : "N";
+        if (
+          newSuggestions.turning_circle !== undefined &&
+          !formData.bathroomTurning150
+        )
+          updates.bathroomTurning150 = newSuggestions.turning_circle
+            ? "Y"
+            : "N";
         if (newSuggestions.length_estimate_cm && !formData.bathroomLengthCm)
           updates.bathroomLengthCm = String(newSuggestions.length_estimate_cm);
         if (newSuggestions.width_estimate_cm && !formData.bathroomWidthCm)
           updates.bathroomWidthCm = String(newSuggestions.width_estimate_cm);
-        if (newSuggestions.lateral_space_estimate_cm && !formData.bathroomLateralSpace)
-          updates.bathroomLateralSpace = String(newSuggestions.lateral_space_estimate_cm);
-        if (newSuggestions.has_separate_toilet !== undefined && !formData.separateToiletPresent)
-          updates.separateToiletPresent = newSuggestions.has_separate_toilet ? "Y" : "N";
+        if (
+          newSuggestions.lateral_space_estimate_cm &&
+          !formData.bathroomLateralSpace
+        )
+          updates.bathroomLateralSpace = String(
+            newSuggestions.lateral_space_estimate_cm,
+          );
+        if (
+          newSuggestions.has_separate_toilet !== undefined &&
+          !formData.separateToiletPresent
+        )
+          updates.separateToiletPresent = newSuggestions.has_separate_toilet
+            ? "Y"
+            : "N";
 
         // ── Kitchen additional ───────────────────────────────────────────────
-        if (newSuggestions.turning_circle_170x140 !== undefined && !formData.kitchenTurning170)
-          updates.kitchenTurning170 = newSuggestions.turning_circle_170x140 ? "Y" : "N";
-        if (newSuggestions.accessible_layout !== undefined && !formData.kitchenAccessibleUnits)
-          updates.kitchenAccessibleUnits = newSuggestions.accessible_layout ? "Y" : "N";
-        if (newSuggestions.separate_from_living !== undefined && !formData.kitchenSeparateLiving)
-          updates.kitchenSeparateLiving = newSuggestions.separate_from_living ? "Y" : "N";
+        if (
+          newSuggestions.turning_circle_170x140 !== undefined &&
+          !formData.kitchenTurning170
+        )
+          updates.kitchenTurning170 = newSuggestions.turning_circle_170x140
+            ? "Y"
+            : "N";
+        if (
+          newSuggestions.accessible_layout !== undefined &&
+          !formData.kitchenAccessibleUnits
+        )
+          updates.kitchenAccessibleUnits = newSuggestions.accessible_layout
+            ? "Y"
+            : "N";
+        if (
+          newSuggestions.separate_from_living !== undefined &&
+          !formData.kitchenSeparateLiving
+        )
+          updates.kitchenSeparateLiving = newSuggestions.separate_from_living
+            ? "Y"
+            : "N";
 
         // ── Entrance ─────────────────────────────────────────────────────────
         if (newSuggestions.property_type && !formData.propertyType) {
-          const normalized = normalizePropertyType(newSuggestions.property_type);
+          const normalized = normalizePropertyType(
+            newSuggestions.property_type,
+          );
           if (normalized) updates.propertyType = normalized;
         }
         if (newSuggestions.entrance_level && !formData.entranceLevel) {
-          const normalized = normalizeEntranceLevel(newSuggestions.entrance_level);
+          const normalized = normalizeEntranceLevel(
+            newSuggestions.entrance_level,
+          );
           if (normalized) updates.entranceLevel = normalized;
         }
         if (
@@ -767,45 +878,107 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
             );
           if (normalized) updates.communalLifts = normalized;
         }
-        if (newSuggestions.communal_entrance !== undefined && !formData.communalDoorPresent)
-          updates.communalDoorPresent = newSuggestions.communal_entrance ? "Y" : "N";
+        if (
+          newSuggestions.communal_entrance !== undefined &&
+          !formData.communalDoorPresent
+        )
+          updates.communalDoorPresent = newSuggestions.communal_entrance
+            ? "Y"
+            : "N";
         if (
           newSuggestions.communal_front_door_present !== undefined &&
           !formData.communalDoorPresent
         ) {
-          updates.communalDoorPresent = newSuggestions.communal_front_door_present
-            ? "Y"
-            : "N";
+          updates.communalDoorPresent =
+            newSuggestions.communal_front_door_present ? "Y" : "N";
         }
         if (
           newSuggestions.property_front_door_present !== undefined &&
           !formData.propertyDoorPresent
         ) {
-          updates.propertyDoorPresent = !!newSuggestions.property_front_door_present;
+          updates.propertyDoorPresent =
+            !!newSuggestions.property_front_door_present;
         }
-        if (newSuggestions.communal_front_door_steps_count !== undefined && !formData.communalStepCount)
-          updates.communalStepCount = String(newSuggestions.communal_front_door_steps_count);
-        if (newSuggestions.property_front_door_steps_count !== undefined && !formData.propertyDoorSteps)
-          updates.propertyDoorSteps = String(newSuggestions.property_front_door_steps_count);
-        if (newSuggestions.communal_front_door_threshold_height_cm !== undefined && !formData.communalDoorThreshold)
-          updates.communalDoorThreshold = String(newSuggestions.communal_front_door_threshold_height_cm);
-        if (newSuggestions.property_front_door_threshold_height_cm !== undefined && !formData.propertyDoorThreshold)
-          updates.propertyDoorThreshold = String(newSuggestions.property_front_door_threshold_height_cm);
-        if (newSuggestions.communal_front_door_opening_width_cm !== undefined && !formData.communalDoorWidth)
-          updates.communalDoorWidth = String(newSuggestions.communal_front_door_opening_width_cm);
-        if (newSuggestions.property_front_door_opening_width_cm !== undefined && !formData.propertyDoorWidth)
-          updates.propertyDoorWidth = String(newSuggestions.property_front_door_opening_width_cm);
-        if (newSuggestions.communal_lift_internal_width_cm !== undefined && !formData.communalLiftWidth)
-          updates.communalLiftWidth = String(newSuggestions.communal_lift_internal_width_cm);
-        if (newSuggestions.communal_lift_internal_depth_cm !== undefined && !formData.communalLiftDepth)
-          updates.communalLiftDepth = String(newSuggestions.communal_lift_internal_depth_cm);
-        if (newSuggestions.communal_lift_door_opening_width_cm !== undefined && !formData.communalLiftDoorWidth)
-          updates.communalLiftDoorWidth = String(newSuggestions.communal_lift_door_opening_width_cm);
-        if (newSuggestions.ramp_present !== undefined && !formData.propertyRampPresent)
+        if (
+          newSuggestions.communal_front_door_steps_count !== undefined &&
+          !formData.communalStepCount
+        )
+          updates.communalStepCount = String(
+            newSuggestions.communal_front_door_steps_count,
+          );
+        if (
+          newSuggestions.property_front_door_steps_count !== undefined &&
+          !formData.propertyDoorSteps
+        )
+          updates.propertyDoorSteps = String(
+            newSuggestions.property_front_door_steps_count,
+          );
+        if (
+          newSuggestions.communal_front_door_threshold_height_cm !==
+            undefined &&
+          !formData.communalDoorThreshold
+        )
+          updates.communalDoorThreshold = String(
+            newSuggestions.communal_front_door_threshold_height_cm,
+          );
+        if (
+          newSuggestions.property_front_door_threshold_height_cm !==
+            undefined &&
+          !formData.propertyDoorThreshold
+        )
+          updates.propertyDoorThreshold = String(
+            newSuggestions.property_front_door_threshold_height_cm,
+          );
+        if (
+          newSuggestions.communal_front_door_opening_width_cm !== undefined &&
+          !formData.communalDoorWidth
+        )
+          updates.communalDoorWidth = String(
+            newSuggestions.communal_front_door_opening_width_cm,
+          );
+        if (
+          newSuggestions.property_front_door_opening_width_cm !== undefined &&
+          !formData.propertyDoorWidth
+        )
+          updates.propertyDoorWidth = String(
+            newSuggestions.property_front_door_opening_width_cm,
+          );
+        if (
+          newSuggestions.communal_lift_internal_width_cm !== undefined &&
+          !formData.communalLiftWidth
+        )
+          updates.communalLiftWidth = String(
+            newSuggestions.communal_lift_internal_width_cm,
+          );
+        if (
+          newSuggestions.communal_lift_internal_depth_cm !== undefined &&
+          !formData.communalLiftDepth
+        )
+          updates.communalLiftDepth = String(
+            newSuggestions.communal_lift_internal_depth_cm,
+          );
+        if (
+          newSuggestions.communal_lift_door_opening_width_cm !== undefined &&
+          !formData.communalLiftDoorWidth
+        )
+          updates.communalLiftDoorWidth = String(
+            newSuggestions.communal_lift_door_opening_width_cm,
+          );
+        if (
+          newSuggestions.ramp_present !== undefined &&
+          !formData.propertyRampPresent
+        )
           updates.propertyRampPresent = newSuggestions.ramp_present ? "Y" : "N";
-        if (newSuggestions.through_floor_lift_present !== undefined && !formData.throughFloorLift)
-          updates.throughFloorLift = !!newSuggestions.through_floor_lift_present;
-        if (newSuggestions.step_lift_present !== undefined && !formData.stepLift)
+        if (
+          newSuggestions.through_floor_lift_present !== undefined &&
+          !formData.throughFloorLift
+        )
+          updates.throughFloorLift =
+            !!newSuggestions.through_floor_lift_present;
+        if (
+          newSuggestions.step_lift_present !== undefined &&
+          !formData.stepLift
+        )
           updates.stepLift = !!newSuggestions.step_lift_present;
         if (
           newSuggestions.platform_stair_lift_present !== undefined &&
@@ -817,15 +990,20 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
           newSuggestions.level_access_shower_present !== undefined &&
           !formData.levelAccessShower
         ) {
-          updates.levelAccessShower = !!newSuggestions.level_access_shower_present;
+          updates.levelAccessShower =
+            !!newSuggestions.level_access_shower_present;
         }
         if (
           newSuggestions.ceiling_track_hoist_present !== undefined &&
           !formData.ceilingTrackHoist
         ) {
-          updates.ceilingTrackHoist = !!newSuggestions.ceiling_track_hoist_present;
+          updates.ceilingTrackHoist =
+            !!newSuggestions.ceiling_track_hoist_present;
         }
-        if (newSuggestions.stair_lift_present !== undefined && !formData.stairLift)
+        if (
+          newSuggestions.stair_lift_present !== undefined &&
+          !formData.stairLift
+        )
           updates.stairLift = !!newSuggestions.stair_lift_present;
         if (
           newSuggestions.through_floor_lift_internal_width_cm !== undefined &&
@@ -873,42 +1051,107 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
           updates.stairWidth = String(newSuggestions.estimated_stair_width_cm);
         if (newSuggestions.internal_stair_width_cm && !formData.stairWidth)
           updates.stairWidth = String(newSuggestions.internal_stair_width_cm);
-        if (newSuggestions.internal_steps_count !== undefined && !formData.internalStepsCount)
-          updates.internalStepsCount = String(newSuggestions.internal_steps_count);
-        if (newSuggestions.internal_step_height_cm !== undefined && !formData.internalStepHeight)
-          updates.internalStepHeight = String(newSuggestions.internal_step_height_cm);
-        if (newSuggestions.estimated_clearance_at_bottom_cm !== undefined && !formData.stairBottomClearance)
-          updates.stairBottomClearance = newSuggestions.estimated_clearance_at_bottom_cm >= 70 ? "Y" : "N";
+        if (
+          newSuggestions.internal_steps_count !== undefined &&
+          !formData.internalStepsCount
+        )
+          updates.internalStepsCount = String(
+            newSuggestions.internal_steps_count,
+          );
+        if (
+          newSuggestions.internal_step_height_cm !== undefined &&
+          !formData.internalStepHeight
+        )
+          updates.internalStepHeight = String(
+            newSuggestions.internal_step_height_cm,
+          );
+        if (
+          newSuggestions.estimated_clearance_at_bottom_cm !== undefined &&
+          !formData.stairBottomClearance
+        )
+          updates.stairBottomClearance =
+            newSuggestions.estimated_clearance_at_bottom_cm >= 70 ? "Y" : "N";
 
         // ── Hallway ──────────────────────────────────────────────────────────
-        if (newSuggestions.width_head_on_estimate_cm && !formData.hallwayWidthHeadOn)
-          updates.hallwayWidthHeadOn = String(newSuggestions.width_head_on_estimate_cm);
+        if (
+          newSuggestions.width_head_on_estimate_cm &&
+          !formData.hallwayWidthHeadOn
+        )
+          updates.hallwayWidthHeadOn = String(
+            newSuggestions.width_head_on_estimate_cm,
+          );
         if (newSuggestions.width_turn_estimate_cm && !formData.hallwayWidthTurn)
-          updates.hallwayWidthTurn = String(newSuggestions.width_turn_estimate_cm);
-        if (newSuggestions.hallway_head_on_width_cm && !formData.hallwayMinWidthHeadOn)
-          updates.hallwayMinWidthHeadOn = String(newSuggestions.hallway_head_on_width_cm);
-        if (newSuggestions.hallway_turn_width_cm && !formData.hallwayMinWidthTurn)
-          updates.hallwayMinWidthTurn = String(newSuggestions.hallway_turn_width_cm);
-        if (newSuggestions.wheelchair_storage_visible !== undefined && !formData.wheelchairStoragePresent)
-          updates.wheelchairStoragePresent = newSuggestions.wheelchair_storage_visible ? "Y" : "N";
-        if (newSuggestions.wheelchair_storage_estimate_length_cm && !formData.wheelchairStorageLengthCm)
-          updates.wheelchairStorageLengthCm = String(newSuggestions.wheelchair_storage_estimate_length_cm);
-        if (newSuggestions.wheelchair_storage_estimate_width_cm && !formData.wheelchairStorageWidthCm)
-          updates.wheelchairStorageWidthCm = String(newSuggestions.wheelchair_storage_estimate_width_cm);
+          updates.hallwayWidthTurn = String(
+            newSuggestions.width_turn_estimate_cm,
+          );
+        if (
+          newSuggestions.hallway_head_on_width_cm &&
+          !formData.hallwayMinWidthHeadOn
+        )
+          updates.hallwayMinWidthHeadOn = String(
+            newSuggestions.hallway_head_on_width_cm,
+          );
+        if (
+          newSuggestions.hallway_turn_width_cm &&
+          !formData.hallwayMinWidthTurn
+        )
+          updates.hallwayMinWidthTurn = String(
+            newSuggestions.hallway_turn_width_cm,
+          );
+        if (
+          newSuggestions.wheelchair_storage_visible !== undefined &&
+          !formData.wheelchairStoragePresent
+        )
+          updates.wheelchairStoragePresent =
+            newSuggestions.wheelchair_storage_visible ? "Y" : "N";
+        if (
+          newSuggestions.wheelchair_storage_estimate_length_cm &&
+          !formData.wheelchairStorageLengthCm
+        )
+          updates.wheelchairStorageLengthCm = String(
+            newSuggestions.wheelchair_storage_estimate_length_cm,
+          );
+        if (
+          newSuggestions.wheelchair_storage_estimate_width_cm &&
+          !formData.wheelchairStorageWidthCm
+        )
+          updates.wheelchairStorageWidthCm = String(
+            newSuggestions.wheelchair_storage_estimate_width_cm,
+          );
 
         // ── Garden ───────────────────────────────────────────────────────────
-        if (newSuggestions.garden_steps_count !== undefined && !formData.gardenSteps)
+        if (
+          newSuggestions.garden_steps_count !== undefined &&
+          !formData.gardenSteps
+        )
           updates.gardenSteps = String(newSuggestions.garden_steps_count);
-        if (newSuggestions.balcony_steps_count !== undefined && !formData.balconyStepCount)
+        if (
+          newSuggestions.balcony_steps_count !== undefined &&
+          !formData.balconyStepCount
+        )
           updates.balconyStepCount = String(newSuggestions.balcony_steps_count);
 
         // ── Second Exit / Section E / Door widths / Adaptability ────────────
-        if (newSuggestions.second_exit_present !== undefined && !formData.secondExitPresent)
-          updates.secondExitPresent = newSuggestions.second_exit_present ? "Y" : "N";
-        if (newSuggestions.second_exit_present !== undefined && !formData.secondExit)
-          updates.secondExit = newSuggestions.second_exit_present ? "Yes" : "No";
-        if (newSuggestions.second_exit_access_to_street !== undefined && !formData.secondExitAccessToStreet)
-          updates.secondExitAccessToStreet = newSuggestions.second_exit_access_to_street ? "Y" : "N";
+        if (
+          newSuggestions.second_exit_present !== undefined &&
+          !formData.secondExitPresent
+        )
+          updates.secondExitPresent = newSuggestions.second_exit_present
+            ? "Y"
+            : "N";
+        if (
+          newSuggestions.second_exit_present !== undefined &&
+          !formData.secondExit
+        )
+          updates.secondExit = newSuggestions.second_exit_present
+            ? "Yes"
+            : "No";
+        if (
+          newSuggestions.second_exit_access_to_street !== undefined &&
+          !formData.secondExitAccessToStreet
+        )
+          updates.secondExitAccessToStreet =
+            newSuggestions.second_exit_access_to_street ? "Y" : "N";
         if (
           newSuggestions.second_exit_access_to_street !== undefined &&
           !formData.secondExitLocation
@@ -918,12 +1161,27 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
           );
           if (normalized) updates.secondExitLocation = normalized;
         }
-        if (newSuggestions.second_exit_steps_count !== undefined && !formData.secondExitSteps)
-          updates.secondExitSteps = String(newSuggestions.second_exit_steps_count);
-        if (newSuggestions.second_exit_threshold_band && !formData.secondExitThreshold)
-          updates.secondExitThreshold = String(newSuggestions.second_exit_threshold_band);
-        if (newSuggestions.second_exit_door_opening_width_cm !== undefined && !formData.secondExitWidth)
-          updates.secondExitWidth = String(newSuggestions.second_exit_door_opening_width_cm);
+        if (
+          newSuggestions.second_exit_steps_count !== undefined &&
+          !formData.secondExitSteps
+        )
+          updates.secondExitSteps = String(
+            newSuggestions.second_exit_steps_count,
+          );
+        if (
+          newSuggestions.second_exit_threshold_band &&
+          !formData.secondExitThreshold
+        )
+          updates.secondExitThreshold = String(
+            newSuggestions.second_exit_threshold_band,
+          );
+        if (
+          newSuggestions.second_exit_door_opening_width_cm !== undefined &&
+          !formData.secondExitWidth
+        )
+          updates.secondExitWidth = String(
+            newSuggestions.second_exit_door_opening_width_cm,
+          );
         const toFacilityList = (sectionValue: any): string[] => {
           if (!sectionValue) return [];
           if (Array.isArray(sectionValue)) {
@@ -939,29 +1197,50 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
           }
           return [];
         };
-        if ((formData.facilitiesAccessLevel || []).length === 0 && newSuggestions.facilities_access_level) {
-          updates.facilitiesAccessLevel = toFacilityList(newSuggestions.facilities_access_level);
+        if (
+          (formData.facilitiesAccessLevel || []).length === 0 &&
+          newSuggestions.facilities_access_level
+        ) {
+          updates.facilitiesAccessLevel = toFacilityList(
+            newSuggestions.facilities_access_level,
+          );
         }
-        if ((formData.facilitiesAboveLevel || []).length === 0 && newSuggestions.facilities_above_level) {
-          updates.facilitiesAboveLevel = toFacilityList(newSuggestions.facilities_above_level);
+        if (
+          (formData.facilitiesAboveLevel || []).length === 0 &&
+          newSuggestions.facilities_above_level
+        ) {
+          updates.facilitiesAboveLevel = toFacilityList(
+            newSuggestions.facilities_above_level,
+          );
         }
-        if ((formData.facilitiesBelowLevel || []).length === 0 && newSuggestions.facilities_below_level) {
-          updates.facilitiesBelowLevel = toFacilityList(newSuggestions.facilities_below_level);
+        if (
+          (formData.facilitiesBelowLevel || []).length === 0 &&
+          newSuggestions.facilities_below_level
+        ) {
+          updates.facilitiesBelowLevel = toFacilityList(
+            newSuggestions.facilities_below_level,
+          );
         }
         if (newSuggestions.bathroom_location) {
           const normalized = normalizeBathroomLocation(
             newSuggestions.bathroom_location,
           );
-          // AI analyzed response is authoritative for bathroom location.
+          // AI analysed response is authoritative for bathroom location.
           if (normalized) updates.bathroomLocation = normalized;
         } else if (!formData.bathroomLocation) {
           const derivedLocation = deriveBathroomLocation({
             accessFacilities:
-              updates.facilitiesAccessLevel || formData.facilitiesAccessLevel || [],
+              updates.facilitiesAccessLevel ||
+              formData.facilitiesAccessLevel ||
+              [],
             aboveFacilities:
-              updates.facilitiesAboveLevel || formData.facilitiesAboveLevel || [],
+              updates.facilitiesAboveLevel ||
+              formData.facilitiesAboveLevel ||
+              [],
             belowFacilities:
-              updates.facilitiesBelowLevel || formData.facilitiesBelowLevel || [],
+              updates.facilitiesBelowLevel ||
+              formData.facilitiesBelowLevel ||
+              [],
             floorLevelNumber: formData.floorLevelNumber,
           });
           if (derivedLocation) {
@@ -969,42 +1248,120 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
           }
         }
 
-        if (newSuggestions.separate_toilet_dimensions_width_cm && !formData.toiletWidth)
-          updates.toiletWidth = String(newSuggestions.separate_toilet_dimensions_width_cm);
-        if (newSuggestions.separate_toilet_dimensions_depth_cm && !formData.toiletLength)
-          updates.toiletLength = String(newSuggestions.separate_toilet_dimensions_depth_cm);
+        if (
+          newSuggestions.separate_toilet_dimensions_width_cm &&
+          !formData.toiletWidth
+        )
+          updates.toiletWidth = String(
+            newSuggestions.separate_toilet_dimensions_width_cm,
+          );
+        if (
+          newSuggestions.separate_toilet_dimensions_depth_cm &&
+          !formData.toiletLength
+        )
+          updates.toiletLength = String(
+            newSuggestions.separate_toilet_dimensions_depth_cm,
+          );
         if (newSuggestions.separate_toilet_count && !formData.toiletCount)
           updates.toiletCount = String(newSuggestions.separate_toilet_count);
-        if (newSuggestions.separate_toilet_lateral_space_cm && !formData.toiletLateralSpace)
-          updates.toiletLateralSpace = String(newSuggestions.separate_toilet_lateral_space_cm);
-        if (newSuggestions.bathroom_dimensions_width_cm && !formData.bathroomWidth)
-          updates.bathroomWidth = String(newSuggestions.bathroom_dimensions_width_cm);
-        if (newSuggestions.bathroom_dimensions_depth_cm && !formData.bathroomLength)
-          updates.bathroomLength = String(newSuggestions.bathroom_dimensions_depth_cm);
-        if (newSuggestions.bathroom_toilet_lateral_space_cm && !formData.bathroomLateralSpace)
-          updates.bathroomLateralSpace = String(newSuggestions.bathroom_toilet_lateral_space_cm);
+        if (
+          newSuggestions.separate_toilet_lateral_space_cm &&
+          !formData.toiletLateralSpace
+        )
+          updates.toiletLateralSpace = String(
+            newSuggestions.separate_toilet_lateral_space_cm,
+          );
+        if (
+          newSuggestions.bathroom_dimensions_width_cm &&
+          !formData.bathroomWidth
+        )
+          updates.bathroomWidth = String(
+            newSuggestions.bathroom_dimensions_width_cm,
+          );
+        if (
+          newSuggestions.bathroom_dimensions_depth_cm &&
+          !formData.bathroomLength
+        )
+          updates.bathroomLength = String(
+            newSuggestions.bathroom_dimensions_depth_cm,
+          );
+        if (
+          newSuggestions.bathroom_toilet_lateral_space_cm &&
+          !formData.bathroomLateralSpace
+        )
+          updates.bathroomLateralSpace = String(
+            newSuggestions.bathroom_toilet_lateral_space_cm,
+          );
 
-        if (newSuggestions.door_opening_width_living_room_cm && !formData.doorLivingWidth)
-          updates.doorLivingWidth = String(newSuggestions.door_opening_width_living_room_cm);
-        if (newSuggestions.door_opening_width_kitchen_cm && !formData.doorKitchenWidth)
-          updates.doorKitchenWidth = String(newSuggestions.door_opening_width_kitchen_cm);
-        if (newSuggestions.door_opening_width_bed_1_cm && !formData.doorBed1Width)
-          updates.doorBed1Width = String(newSuggestions.door_opening_width_bed_1_cm);
-        if (newSuggestions.door_opening_width_bed_2_cm && !formData.doorBed2Width)
-          updates.doorBed2Width = String(newSuggestions.door_opening_width_bed_2_cm);
-        if (newSuggestions.door_opening_width_bed_3_cm && !formData.doorBed3Width)
-          updates.doorBed3Width = String(newSuggestions.door_opening_width_bed_3_cm);
-        if (newSuggestions.door_opening_width_separate_toilet_cm && !formData.doorToiletWidth)
-          updates.doorToiletWidth = String(newSuggestions.door_opening_width_separate_toilet_cm);
-        if (newSuggestions.door_opening_width_bathroom_cm && !formData.doorBathroomWidth)
-          updates.doorBathroomWidth = String(newSuggestions.door_opening_width_bathroom_cm);
-        if (newSuggestions.door_opening_width_balcony_cm && !formData.doorBalconyWidth)
-          updates.doorBalconyWidth = String(newSuggestions.door_opening_width_balcony_cm);
+        if (
+          newSuggestions.door_opening_width_living_room_cm &&
+          !formData.doorLivingWidth
+        )
+          updates.doorLivingWidth = String(
+            newSuggestions.door_opening_width_living_room_cm,
+          );
+        if (
+          newSuggestions.door_opening_width_kitchen_cm &&
+          !formData.doorKitchenWidth
+        )
+          updates.doorKitchenWidth = String(
+            newSuggestions.door_opening_width_kitchen_cm,
+          );
+        if (
+          newSuggestions.door_opening_width_bed_1_cm &&
+          !formData.doorBed1Width
+        )
+          updates.doorBed1Width = String(
+            newSuggestions.door_opening_width_bed_1_cm,
+          );
+        if (
+          newSuggestions.door_opening_width_bed_2_cm &&
+          !formData.doorBed2Width
+        )
+          updates.doorBed2Width = String(
+            newSuggestions.door_opening_width_bed_2_cm,
+          );
+        if (
+          newSuggestions.door_opening_width_bed_3_cm &&
+          !formData.doorBed3Width
+        )
+          updates.doorBed3Width = String(
+            newSuggestions.door_opening_width_bed_3_cm,
+          );
+        if (
+          newSuggestions.door_opening_width_separate_toilet_cm &&
+          !formData.doorToiletWidth
+        )
+          updates.doorToiletWidth = String(
+            newSuggestions.door_opening_width_separate_toilet_cm,
+          );
+        if (
+          newSuggestions.door_opening_width_bathroom_cm &&
+          !formData.doorBathroomWidth
+        )
+          updates.doorBathroomWidth = String(
+            newSuggestions.door_opening_width_bathroom_cm,
+          );
+        if (
+          newSuggestions.door_opening_width_balcony_cm &&
+          !formData.doorBalconyWidth
+        )
+          updates.doorBalconyWidth = String(
+            newSuggestions.door_opening_width_balcony_cm,
+          );
 
-        if (newSuggestions.can_be_adapted !== undefined && !formData.adaptableProperty)
+        if (
+          newSuggestions.can_be_adapted !== undefined &&
+          !formData.adaptableProperty
+        )
           updates.adaptableProperty = newSuggestions.can_be_adapted ? "Y" : "N";
-        if (newSuggestions.adaptability_comments && !formData.adaptabilityReasoning)
-          updates.adaptabilityReasoning = String(newSuggestions.adaptability_comments);
+        if (
+          newSuggestions.adaptability_comments &&
+          !formData.adaptabilityReasoning
+        )
+          updates.adaptabilityReasoning = String(
+            newSuggestions.adaptability_comments,
+          );
         if (newSuggestions.suggested_hazards && !formData.hazards)
           updates.hazards = String(newSuggestions.suggested_hazards);
         // ── Smart defaults: "not detected = No/N/0" ──────────────────────────
@@ -1159,14 +1516,15 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
 
         const guessedDoorWidth = (value: number | null, fallback: number) =>
           value !== null ? value : fallback;
-        prioritizedSectionFill.door_opening_width_living_room_cm = guessedDoorWidth(
-          pickNumber(
-            aiSuggestions.door_opening_width_living_room_cm,
-            formData.doorLivingWidth,
-            sectionFill.door_opening_width_living_room_cm,
-          ),
-          80,
-        );
+        prioritizedSectionFill.door_opening_width_living_room_cm =
+          guessedDoorWidth(
+            pickNumber(
+              aiSuggestions.door_opening_width_living_room_cm,
+              formData.doorLivingWidth,
+              sectionFill.door_opening_width_living_room_cm,
+            ),
+            80,
+          );
         prioritizedSectionFill.door_opening_width_kitchen_cm = guessedDoorWidth(
           pickNumber(
             aiSuggestions.door_opening_width_kitchen_cm,
@@ -1199,22 +1557,24 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
           ),
           78,
         );
-        prioritizedSectionFill.door_opening_width_bathroom_cm = guessedDoorWidth(
-          pickNumber(
-            aiSuggestions.door_opening_width_bathroom_cm,
-            formData.doorBathroomWidth,
-            sectionFill.door_opening_width_bathroom_cm,
-          ),
-          76,
-        );
-        prioritizedSectionFill.door_opening_width_separate_toilet_cm = guessedDoorWidth(
-          pickNumber(
-            aiSuggestions.door_opening_width_separate_toilet_cm,
-            formData.doorToiletWidth,
-            sectionFill.door_opening_width_separate_toilet_cm,
-          ),
-          74,
-        );
+        prioritizedSectionFill.door_opening_width_bathroom_cm =
+          guessedDoorWidth(
+            pickNumber(
+              aiSuggestions.door_opening_width_bathroom_cm,
+              formData.doorBathroomWidth,
+              sectionFill.door_opening_width_bathroom_cm,
+            ),
+            76,
+          );
+        prioritizedSectionFill.door_opening_width_separate_toilet_cm =
+          guessedDoorWidth(
+            pickNumber(
+              aiSuggestions.door_opening_width_separate_toilet_cm,
+              formData.doorToiletWidth,
+              sectionFill.door_opening_width_separate_toilet_cm,
+            ),
+            74,
+          );
         prioritizedSectionFill.door_opening_width_balcony_cm = guessedDoorWidth(
           pickNumber(
             aiSuggestions.door_opening_width_balcony_cm,
@@ -1250,7 +1610,10 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
         }
 
         if (normalizedReportFill.known_hazards.trim() && !formData.hazards) {
-          handleUpdateField("hazards", normalizedReportFill.known_hazards.trim());
+          handleUpdateField(
+            "hazards",
+            normalizedReportFill.known_hazards.trim(),
+          );
         }
 
         handleUpdateField("aiReport", {
@@ -1416,7 +1779,8 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 onClick={() => setStep(step - 1)}
                 className="py-2 px-3 sm:py-2.5 sm:px-5 bg-white text-text-main rounded-lg sm:rounded-xl border border-slate-200 font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 cursor-pointer shrink-0"
               >
-                <ChevronLeft size={18} className="sm:w-5 sm:h-5 shrink-0" /> <span className="hidden sm:inline">Back</span>
+                <ChevronLeft size={18} className="sm:w-5 sm:h-5 shrink-0" />{" "}
+                <span className="hidden sm:inline">Back</span>
               </button>
             )}
 
@@ -1426,10 +1790,17 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
               className={cn(
                 "py-2 px-3 sm:py-2.5 sm:px-5 bg-white rounded-lg sm:rounded-xl border font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 shrink-0",
                 "border-primary text-primary",
-                isSavingDraft && "opacity-70 cursor-not-allowed"
+                isSavingDraft && "opacity-70 cursor-not-allowed",
               )}
             >
-              {isSavingDraft ? "Saving…" : <><span className="hidden sm:inline">Save Progress</span><span className="sm:hidden">Save</span></>}
+              {isSavingDraft ? (
+                "Saving…"
+              ) : (
+                <>
+                  <span className="hidden sm:inline">Save Progress</span>
+                  <span className="sm:hidden">Save</span>
+                </>
+              )}
             </button>
 
             {step === 4 && (
@@ -1445,26 +1816,36 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 }
                 className={cn(
                   "py-2 px-3 sm:py-2.5 sm:px-5 rounded-lg sm:rounded-xl border font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 shrink-0",
-                  step3AnalysisComplete && "border-green-600 text-green-600 bg-green-50 cursor-not-allowed",
-                  isAnalyzing && !step3AnalysisComplete && "border-primary text-primary bg-white cursor-not-allowed",
-                  ((formData.photos || []).length < 1 || isProcessing) && !step3AnalysisComplete && !isAnalyzing && "bg-slate-300 border-slate-300 text-white cursor-not-allowed opacity-60 shadow-none",
-                  !step3AnalysisComplete && !isAnalyzing && (formData.photos || []).length >= 1 && !isProcessing && "border-primary text-primary font-extrabold bg-white"
+                  step3AnalysisComplete &&
+                    "border-green-600 text-green-600 bg-green-50 cursor-not-allowed",
+                  isAnalyzing &&
+                    !step3AnalysisComplete &&
+                    "border-primary text-primary bg-white cursor-not-allowed",
+                  ((formData.photos || []).length < 1 || isProcessing) &&
+                    !step3AnalysisComplete &&
+                    !isAnalyzing &&
+                    "bg-slate-300 border-slate-300 text-white cursor-not-allowed opacity-60 shadow-none",
+                  !step3AnalysisComplete &&
+                    !isAnalyzing &&
+                    (formData.photos || []).length >= 1 &&
+                    !isProcessing &&
+                    "border-primary text-primary font-extrabold bg-white",
                 )}
               >
                 {isAnalyzing ? (
                   <>
                     <RefreshCw className="animate-spin shrink-0" size={14} />
-                    <span className="hidden sm:inline">Analyzing...</span>
+                    <span className="hidden sm:inline">Analysing...</span>
                   </>
                 ) : step3AnalysisComplete ? (
                   <>
                     <CheckCircle size={14} className="shrink-0" />
-                    <span className="hidden sm:inline">Analyzed</span>
+                    <span className="hidden sm:inline">Analysed</span>
                   </>
                 ) : (
                   <>
                     <Camera size={14} className="shrink-0" />
-                    <span className="hidden sm:inline">Analyze Photos</span>
+                    <span className="hidden sm:inline">Analyse Photos</span>
                   </>
                 )}
               </button>
@@ -1488,7 +1869,7 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                 "py-2 px-3 sm:py-2.5 sm:px-5 rounded-lg sm:rounded-xl border-none font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 transition-all shrink-0",
                 isNextDisabled()
                   ? "bg-slate-300 text-white cursor-not-allowed opacity-60 shadow-none"
-                  : "bg-primary text-white cursor-pointer shadow-[0_4px_12px_rgba(99,102,241,0.3)]"
+                  : "bg-primary text-white cursor-pointer shadow-[0_4px_12px_rgba(99,102,241,0.3)]",
               )}
             >
               <span className="hidden sm:inline">
@@ -1499,9 +1880,15 @@ const AssessmentWizard: React.FC<AssessmentWizardProps> = ({
                     : "Continue"}
               </span>
               <span className="sm:hidden">
-                {step === analysisStepIndex ? "Complete" : step === 8 ? "Report" : "Next"}
+                {step === analysisStepIndex
+                  ? "Complete"
+                  : step === 8
+                    ? "Report"
+                    : "Next"}
               </span>
-              {step < analysisStepIndex && <ChevronRight size={18} className="sm:w-5 sm:h-5 shrink-0" />}
+              {step < analysisStepIndex && (
+                <ChevronRight size={18} className="sm:w-5 sm:h-5 shrink-0" />
+              )}
             </button>
           </div>
         </div>
